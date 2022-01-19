@@ -5,13 +5,15 @@ CS 405
 This is the file that contains main and will run the program
 */
 
-#include<SFML/Graphics.hpp>
+#include "board.h"
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
+    Board board;
+
+    board.setBoardLength(256);
+
+    sf::RenderWindow window(sf::VideoMode(board.getBoardLength(), board.getBoardLength()), "Basic Checkers!");
 
     while (window.isOpen())
     {
@@ -23,7 +25,7 @@ int main()
         }
 
         window.clear();
-        window.draw(shape);
+        board.drawSelf(window);
         window.display();
     }
 
