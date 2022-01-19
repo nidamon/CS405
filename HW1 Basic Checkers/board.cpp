@@ -28,7 +28,7 @@ void Board::setup()
 	for (size_t i = 0; i < _tiles.size(); i++)
 	{
 		if(i < 12)					// Top of board
-			_tiles[i] = PieceType::Player1_King;
+			_tiles[i] = PieceType::Player1_Pawn;
 		else if (i >= 12 && i < 20)	// Middle of board
 			_tiles[i] = PieceType::NoPiece;
 		else						// Bottom of board
@@ -39,16 +39,28 @@ void Board::setup()
 // Piece diplay setup
 void Board::playerPieceDisplaySetup()
 {	
-	_player1PiecePawn.setFillColor(sf::Color::Red);
-	_player2PiecePawn.setFillColor(sf::Color::Black);
+	bool textureTest = true;
+	if (!_player1PiecePawnTexture.loadFromFile("RedPawnBase.png"))
+		textureTest = false;
+	if (!_player2PiecePawnTexture.loadFromFile("BlackPawnBase.png"))
+		textureTest = false;
+	if (!_player1PieceKingTexture.loadFromFile("RedKing.png"))
+		textureTest = false;
+	if (!_player2PieceKingTexture.loadFromFile("BlackKing.png"))
+		textureTest = false;
 
-	_player1PieceKing.setFillColor(sf::Color::Red);
-	_player1PieceKing.setOutlineColor(sf::Color::Yellow);
-	_player1PieceKing.setOutlineThickness(2);
+	if(!textureTest)
+		std::cout << "Error in piece image load" << std::endl;
 
-	_player2PieceKing.setFillColor(sf::Color::Black);
-	_player2PieceKing.setOutlineColor(sf::Color::Yellow);
-	_player2PieceKing.setOutlineThickness(2);
+
+
+	_player1PiecePawn.setTexture(_player1PiecePawnTexture);
+	_player2PiecePawn.setTexture(_player2PiecePawnTexture);
+
+	_player1PieceKing.setTexture(_player1PieceKingTexture);
+	_player2PieceKing.setTexture(_player2PieceKingTexture);
+
+	setPieceScale(0.9f);
 }
 
 void Board::drawSelf(sf::RenderWindow& gfx)
@@ -116,19 +128,18 @@ int Board::getBoardLength()
 void Board::setBoardLength(int newBoardLength)
 {
 	_length = newBoardLength;
-	setPieceRadius(_length / 20.0f);
-	_pieceOffset = { _length / 16.0f - _pieceRadius, _length / 16.0f - _pieceRadius };
+	_pieceOffset = { _length / 16.0f - (_halfPieceLength * _pieceScale), _length / 16.0f - (_halfPieceLength * _pieceScale) };
 }
 
-void Board::setPieceRadius(float newSize)
+void Board::setPieceScale(float newScale)
 {
-	_pieceRadius = newSize;
+	_pieceScale = newScale;
 
 	// Pawns
-	_player1PiecePawn.setRadius(_pieceRadius);
-	_player2PiecePawn.setRadius(_pieceRadius);
+	_player1PiecePawn.setScale(_pieceScale, _pieceScale);
+	_player2PiecePawn.setScale(_pieceScale, _pieceScale);
 
 	// Kings
-	_player1PieceKing.setRadius(_pieceRadius);
-	_player2PieceKing.setRadius(_pieceRadius);
+	_player1PieceKing.setScale(_pieceScale, _pieceScale);
+	_player2PieceKing.setScale(_pieceScale, _pieceScale);
 }

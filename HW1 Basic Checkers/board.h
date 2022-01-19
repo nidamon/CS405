@@ -45,7 +45,7 @@ public:
 	int getBoardLength();
 	void setBoardLength(int newBoardLength);
 
-	void setPieceRadius(float newSize);
+	void setPieceScale(float newScale);
 
 private:
 	// Function
@@ -55,14 +55,20 @@ private:
 	sf::Texture _boardTexture;
 	sf::Sprite _boardSprite;
 
-	sf::CircleShape _player1PiecePawn;
-	sf::CircleShape _player2PiecePawn;
-	sf::CircleShape _player1PieceKing;
-	sf::CircleShape _player2PieceKing;
+	sf::Texture _player1PiecePawnTexture;
+	sf::Texture _player2PiecePawnTexture;
+	sf::Texture _player1PieceKingTexture;
+	sf::Texture _player2PieceKingTexture;
+
+	sf::Sprite _player1PiecePawn;
+	sf::Sprite _player2PiecePawn;
+	sf::Sprite _player1PieceKing;
+	sf::Sprite _player2PieceKing;
 
 	size_t _length = 200;
 
-	float _pieceRadius = 1.0f;
+	float _pieceScale = 1.0f;
+	float _halfPieceLength = 16.0f;
 	sf::Vector2<float> _pieceOffset = { 0.0f, 0.0f };
 };
 
