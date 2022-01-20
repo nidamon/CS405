@@ -53,7 +53,7 @@ public:
 	sf::Vector2<float> getPieceOffset();
 	float getHalfPieceLength();
 	void setBoardLength(int newBoardLength);
-
+	   
 	// Movement
 	std::vector<sf::Vector3<int>> generateMoves(int team);
 

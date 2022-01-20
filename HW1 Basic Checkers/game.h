@@ -26,11 +26,19 @@ private:
 	void drawSelf();
 	void makeRandomMove();
 
+	void displayStats();
+	void addHistogramData(int movesGenerated);
+
 	int _turn = 1;
 	std::vector<sf::Vector3<int>> _possibleMoves;
 
 	Board _board;
 	sf::RenderWindow _gfx;
+
+
+	int _maxMovesGenerated = 0;
+	int _minMovesGenerated = 100;
+	std::vector<int> _histogramData;
 };
 
 

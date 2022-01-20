@@ -60,7 +60,7 @@ void Board::playerPieceDisplaySetup()
 	_player1PieceKing.setTexture(_player1PieceKingTexture);
 	_player2PieceKing.setTexture(_player2PieceKingTexture);
 
-	setPieceScale(0.9f);
+	setPieceScale(0.8f);
 }
 
 void Board::drawSelf(sf::RenderWindow& gfx)
@@ -251,12 +251,13 @@ void Board::setBoardLength(int newBoardLength)
 {
 	_length = newBoardLength;
 	_tileWidth = float(newBoardLength) / 8.0f;
-	_pieceOffset = { _length / 16.0f - (_halfPieceLength * _pieceScale), _length / 16.0f - (_halfPieceLength * _pieceScale) };
+	_pieceOffset = { float(_length) / 16.0f - (_halfPieceLength * _pieceScale), float(_length) / 16.0f - (_halfPieceLength * _pieceScale) };
 }
 
 void Board::setPieceScale(float newScale)
 {
 	_pieceScale = newScale;
+	_pieceOffset = { float(_length) / 16.0f - (_halfPieceLength * _pieceScale), float(_length) / 16.0f - (_halfPieceLength * _pieceScale) };
 
 	// Pawns
 	_player1PiecePawn.setScale(_pieceScale, _pieceScale);
@@ -266,7 +267,6 @@ void Board::setPieceScale(float newScale)
 	_player1PieceKing.setScale(_pieceScale, _pieceScale);
 	_player2PieceKing.setScale(_pieceScale, _pieceScale);
 }
-
 
 
 
@@ -315,7 +315,6 @@ std::vector<sf::Vector3<int>> Board::generateMoves(int teamTurn)
 void Board::movePiece(sf::Vector3<int> move)
 {
 	std::swap(_tiles[move.x], _tiles[move.y]);
-	std::cout << "(" << move.x << ", " << move.y << ")" << std::endl;
 	// Crowning
 	if (move.y < 4 && _tiles[move.y] == PieceType::Player2_Pawn)
 		_tiles[move.y] = PieceType::Player2_King;
