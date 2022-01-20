@@ -27,25 +27,38 @@ public:
 	Board();
 	~Board();
 
-	void setup();
-	void playerPieceDisplaySetup();
-	
 	void drawSelf(sf::RenderWindow& gfx);
 
 private:
+	void setup();
+	void playerPieceDisplaySetup();
+
 	void drawPiece(sf::RenderWindow& gfx, sf::Vector2<float> position, int tilesIndex);
-	sf::Vector2<float> indexToPosition(int tileIndex);
+
+	void pieceTypeToCout(PieceType pieceType);
+
 public:
+	sf::Vector2<float> indexToPosition(int tileIndex);
+	int xyToIndex(int x, int y);
+	sf::Vector2<int> indexToXY(int tileIndex);
 
-	std::vector<sf::Vector2<int>> generateMoves(int team);
-
-	void movePiece(int currentLocation, int newLocation);
-	void removePiece(int location);
-
-	int getBoardLength();
-	void setBoardLength(int newBoardLength);
+	// {-1, -1} if invalid, otherwise returns {from, to}
+	sf::Vector3<int> getMoveToIndex(int tileIndex, int movement);
+	//int getIndexInBetween(int indexFrom, int indexTo);
 
 	void setPieceScale(float newScale);
+
+	int getBoardLength();
+	float getTileWidth();
+	sf::Vector2<float> getPieceOffset();
+	float getHalfPieceLength();
+	void setBoardLength(int newBoardLength);
+
+	// Movement
+	std::vector<sf::Vector3<int>> generateMoves(int team);
+
+	void movePiece(sf::Vector3<int> move);
+	void removePiece(int location);
 
 private:
 	// Function
@@ -65,11 +78,20 @@ private:
 	sf::Sprite _player1PieceKing;
 	sf::Sprite _player2PieceKing;
 
-	size_t _length = 200;
+	size_t _length = 256;
+	float _tileWidth = 32.0f;
 
 	float _pieceScale = 1.0f;
 	float _halfPieceLength = 16.0f;
 	sf::Vector2<float> _pieceOffset = { 0.0f, 0.0f };
+
+
+	// Movement
+	// For use with forloop for getToMoveIndex input
+	std::vector<int> _upAndDownMoves = { 0, 1, 4, 5, 2, 3, 6, 7 };
+
+	std::vector<int> _oddRowMoveOffsets = { -4, -3, 4, 5, -9, -7, 7, 9 };
+	std::vector<int> _evenRowMoveOffsets = { -5, -4, 3, 4, -9, -7, 7, 9 };
 };
 
 
