@@ -9,8 +9,10 @@ This is the file that contains main and will run the program
 
 int main()
 {
-	Game game;
+	Game game(Game::PlayerColor::CPU_playerGame);
 	game.run();
+
+	game.displayStats();
 
 	return 0;
 }

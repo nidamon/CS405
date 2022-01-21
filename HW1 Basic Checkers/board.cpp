@@ -164,7 +164,7 @@ sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
 			if ((tileIndex / 4) % 2 == 0) // If on an odd row (includes Top row)
 			{
 				// Piece being jumped is not on the jumper's team
-				if (_tiles[tileIndex + _oddRowMoveOffsets[movement - 4]] != PieceType::NoPiece && int(_tiles[tileIndex + _oddRowMoveOffsets[movement - 4]]) / 2 != int(_tiles[tileIndex]) / 2)
+				if (_tiles[tileIndex + _oddRowMoveOffsets[movement - 4]] != PieceType::NoPiece && int(_tiles[tileIndex + _oddRowMoveOffsets[movement - 4]]) % 2 != int(_tiles[tileIndex]) % 2)
 				{		
 					return { tileIndex, moveTo, tileIndex + _oddRowMoveOffsets[movement - 4] };
 				}
@@ -174,7 +174,7 @@ sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
 			else // If on an even row (includes Bottom row)
 			{
 				// Piece being jumped is not on the jumper's team
-				if (_tiles[tileIndex + _evenRowMoveOffsets[movement - 4]] != PieceType::NoPiece && int(_tiles[tileIndex + _evenRowMoveOffsets[movement - 4]]) / 2 != int(_tiles[tileIndex]) / 2)
+				if (_tiles[tileIndex + _evenRowMoveOffsets[movement - 4]] != PieceType::NoPiece && int(_tiles[tileIndex + _evenRowMoveOffsets[movement - 4]]) % 2 != int(_tiles[tileIndex]) % 2)
 				{			
 					return { tileIndex, moveTo, tileIndex + _evenRowMoveOffsets[movement - 4] };
 				}
@@ -188,48 +188,6 @@ sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
 	}
 
 }
-//int Board::getIndexInBetween(int indexFrom, int indexTo)
-//{
-//	if ((indexFrom / 4) % 2 == 1) // if on an even row (includes bottom row)
-//	{
-//		if (indexFrom > indexTo) // indexTo is above the from position on the board
-//		{
-//			if (indexTo > indexFrom - 8) // indexTo is right of the from position on the board
-//				return indexFrom - 4; // Right
-//			else
-//				return indexFrom - 5; // Left
-//		}
-//		else
-//		{
-//			if (indexTo > indexFrom + 8) // indexTo is right of the from position on the board
-//				return indexFrom + 4; // Right
-//			else
-//				return indexFrom + 3; // Left
-//		}
-//
-//
-//	}
-//	else // on an odd row (includes top row)
-//	{
-//		if (indexFrom > indexTo) // indexTo is above the from position on the board
-//		{
-//			if (indexTo > indexFrom - 8) // indexTo is right of the from position on the board
-//				return indexFrom - 3; // Right
-//			else
-//				return indexFrom - 4; // Left
-//		}
-//		else
-//		{
-//			if (indexTo > indexFrom + 8) // indexTo is right of the from position on the board
-//				return indexFrom + 5; // Right
-//			else
-//				return indexFrom + 4; // Left
-//		}
-//	}
-//
-//	std::cout << "getIndexInBetween(" << indexFrom << ", " << indexTo << ") had an error." << std::endl;
-//	return -1;
-//}
 
 int Board::getBoardLength()
 {
@@ -268,48 +226,63 @@ void Board::setPieceScale(float newScale)
 	_player2PieceKing.setScale(_pieceScale, _pieceScale);
 }
 
-
-
-std::vector<sf::Vector3<int>> Board::generateMoves(int teamTurn)
+std::vector<PieceType>& Board::getBoardTiles()
 {
-	std::vector<sf::Vector3<int>> generatedMoves;
-	generatedMoves.reserve(24); // One quarter of the max possible moves given that 12 kings are 
-								//	on the board such that each can make any kind of move
-
-	auto getIndividualPieceMoves = [&](int index) {
-		if (_tiles[index] != PieceType::NoPiece && int(_tiles[index]) % 2 + 1 == teamTurn)
+	return _tiles;
+}
+// True if a jump is available
+bool Board::getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int index, int teamTurn)
+{
+	bool didWeFindAJump = false;
+	if (_tiles[index] != PieceType::NoPiece && int(_tiles[index]) % 2 == teamTurn % 2)
+	{
+		sf::Vector3<int> move;
+		if (_tiles[index] != PieceType::Player1_Pawn) // It is player2_Pawn, Player1_King, or Player2_King
 		{
-			sf::Vector3<int> move;
-			if (_tiles[index] != PieceType::Player1_Pawn) // It is player2_Pawn, Player1_King, or Player2_King
+			// Look at moves directed up
+			for (size_t i = 0; i < 4; i++) // 4 moves up possible
 			{
-				// Look at moves directed up
-				for (size_t i = 0; i < 4; i++) // 4 moves up possible
+				move = getMoveToIndex(index, _upAndDownMoves[i]);
+				if (move.x != -1) // Not invalid
 				{
-					move = getMoveToIndex(index, _upAndDownMoves[i]);
-					if (move.x != -1) // Not invalid
-						generatedMoves.push_back(move);
+					if (move.z != -1) // The move was a jump
+						didWeFindAJump = true;
+					moves.push_back(move);
 				}
-			}
 
-			if (_tiles[index] != PieceType::Player2_Pawn) // It is player1_Pawn, Player1_King, or Player2_King
+			}
+		}
+
+		if (_tiles[index] != PieceType::Player2_Pawn) // It is player1_Pawn, Player1_King, or Player2_King
+		{
+			// Look at moves directed down
+			for (size_t i = 4; i < 8; i++) // 4 moves up possible
 			{
-				// Look at moves directed down
-				for (size_t i = 4; i < 8; i++) // 4 moves up possible
+				move = getMoveToIndex(index, _upAndDownMoves[i]);
+				if (move.x != -1) // Not invalid
 				{
-					move = getMoveToIndex(index, _upAndDownMoves[i]);
-					if (move.x != -1) // Not invalid
-						generatedMoves.push_back(move);
+					if (move.z != -1) // The move was a jump
+						didWeFindAJump = true;
+					moves.push_back(move);
 				}
 			}
 		}
-	};
+	}
+	return didWeFindAJump;
+}
 
+void Board::generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int teamTurn)
+{
+	bool thereIsAJump = false;
 	for (size_t i = 0; i < _tiles.size(); i++)
-		getIndividualPieceMoves(i);
+		if (getIndividualPieceMoves(generatedMoves, i, teamTurn))
+			thereIsAJump = true;
 
-	//std::cout << "MovesGenerated: " << generatedMoves.size() << std::endl;
-
-	return generatedMoves;
+	// Remove all but jumps
+	if (thereIsAJump)
+		generatedMoves.erase(
+			std::remove_if(generatedMoves.begin(), generatedMoves.end(),
+				[](const sf::Vector3<int> move) {return move.z == -1; }), generatedMoves.end());
 }
 
 void Board::movePiece(sf::Vector3<int> move)

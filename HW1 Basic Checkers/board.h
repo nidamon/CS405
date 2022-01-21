@@ -44,10 +44,10 @@ public:
 
 	// {-1, -1} if invalid, otherwise returns {from, to}
 	sf::Vector3<int> getMoveToIndex(int tileIndex, int movement);
-	//int getIndexInBetween(int indexFrom, int indexTo);
 
 	void setPieceScale(float newScale);
 
+	std::vector<PieceType>& getBoardTiles();
 	int getBoardLength();
 	float getTileWidth();
 	sf::Vector2<float> getPieceOffset();
@@ -55,7 +55,9 @@ public:
 	void setBoardLength(int newBoardLength);
 	   
 	// Movement
-	std::vector<sf::Vector3<int>> generateMoves(int team);
+	// True if a jump is available
+	bool getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int index, int teamTurn);
+	void generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int teamTurn);
 
 	void movePiece(sf::Vector3<int> move);
 	void removePiece(int location);
