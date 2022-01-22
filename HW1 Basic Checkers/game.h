@@ -38,6 +38,8 @@ private:
 	void winCheck();
 
 	void drawSelf();
+	// Returns true if player2's color is black
+	bool setPlayer2Color(PlayerColor playerColor, PlayerColor team2Color);
 
 	void getMoves();
 	void conductMoves();

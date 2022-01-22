@@ -12,7 +12,7 @@ std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
 Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
-    : _board(int(player2Color) % 2 + 1) ,
+    : _board(setPlayer2Color(playerColor, player2Color)),
       _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
 {
     _gfx.setSize(boardsize);
@@ -191,7 +191,14 @@ void Game::drawSelf()
         winDisplay();
     _gfx.display();
 }
-
+// Returns true if player2's color is black
+bool Game::setPlayer2Color(PlayerColor playerColor, PlayerColor team2Color)
+{
+    if (playerColor <= PlayerColor::Red)
+        return (int(team2Color) + 1) % 2;
+    else
+        return (int(playerColor) + 1) % 2;
+}
 void Game::getMoves()
 {
     if (!_gameOver)
