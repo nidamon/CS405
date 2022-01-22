@@ -11,18 +11,33 @@ std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
-Game::Game() 
-    : _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
+Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
+    : _board(int(player2Color) % 2 + 1) ,
+      _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
 {
-}
-Game::Game(PlayerColor playerColor) 
-    : _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!"),
-    _playerTurn(int(playerColor))
-{
+    _gfx.setSize(boardsize);
+
+    // Player 1 or Red player
+    if (playerColor == PlayerColor::CPU_playerGame)
+        _userTurn = 0; // Player has no turn
+    else if (playerColor == PlayerColor::Red)
+        _userTurn = 1;
+    else
+        _userTurn = 2;
+
+    // Player 1 or Red player
+    if (playerColor == PlayerColor::Black)
+        _player2Color = PlayerColor::Black;
+    else
+        _player2Color = PlayerColor::White;
+
+    setupWinSprite();    
 }
 
 Game::~Game()
 {
+    if(_gfx.isOpen())
+        _gfx.close();
 }
 
 void Game::run()
@@ -31,63 +46,27 @@ void Game::run()
     {
         sf::Event event;
         while (_gfx.pollEvent(event))
-        {
-            if (_playerTurn == _turn)
-                if (event.type == sf::Event::MouseButtonPressed) {                    
-                    auto pos = (sf::Mouse::getPosition() - _gfx.getPosition()) + sf::Vector2i(-8, -31);
-                    std::cout << "MousePos: (" << pos.x << "," << pos.y << ")" << std::endl;
-                    if (pos.x >= 0 && pos.x < _board.getBoardLength())
-                        if (pos.y >= 0 && pos.y < _board.getBoardLength())
-                        {
-                            pos.x /= (_gfx.getSize().x / 8);
-                            pos.y /= (_gfx.getSize().y / 8);
-                            std::cout << "Window size: (" << _gfx.getSize().x << "," << _gfx.getSize().x << ")" << std::endl;
-                            std::cout << "BoardPos: (" << pos.x << "," << pos.y << ")" << std::endl;
-                            _userSelectedIndex = _board.xyToIndex(pos.x, pos.y);
-                        }
-                }
+        {            
+            if (event.type == sf::Event::MouseButtonPressed)
+            {
+                if (_gameOver) // If mouse click and the game is over
+                    return;
+                if (_userTurn == _turn)
+                    setSelectedIndex();
+            }
 
             if (event.type == sf::Event::Closed)
                 _gfx.close();
         }
 
         // Get possible piece moves
-        if (!areAdditionalJumps())
-        {
-            // Don't generate new moves if a move has yet to be made
-            if (_possibleMoves.empty())
-            {
-                _board.generateMoves(_possibleMoves, _turn);
-                addHistogramData(_possibleMoves.size());
-            }
-        }
-        else
-            loadAdditionalJumps();
+        getMoves();
 
-
-        
         // Game over
-        if (_possibleMoves.empty())
-        {
-            if (_turn == 2) // Black can't play
-                std::cout << "Red Wins" << std::endl;
-            if (_turn == 1) // Red can't play
-                std::cout << "Black Wins" << std::endl;                
-            return;
-        }
+        winCheck();
 
         drawSelf();
-
-        if (isUserTurn())
-            userInputHandle();
-        else
-        {
-            Sleep(200);
-            makeRandomMove();
-
-            drawSelf();
-            Sleep(200);
-        }
+        conductMoves();
     }
 }
 void Game::nextTurn()
@@ -106,7 +85,6 @@ void Game::displayMoves()
         _gfx.draw(lines);
     }
 }
-
 void Game::displayStats()
 {
     for (size_t i = 0; i < _histogramData.size(); i++)
@@ -137,16 +115,129 @@ void Game::displayStats()
     std::cout << "Average: " << totalMovesGenerated / totalMoveGenerations << std::endl;
 }
 
+void Game::setupWinSprite()
+{
+    if (!_winTexture.loadFromFile("WinMessage.png"))
+        std::cout << "Error in winTexture image load" << std::endl;
 
+    _winSprite.setTexture(_winTexture);
+}
+void Game::winDisplay()
+{
+    _gfx.draw(_winSprite);
+}
+void Game::winDisplaySet(PlayerColor playerColor)
+{   
+    sf::Vector2<int> rectArea(104, 20);
+    sf::Vector2<int> position(0, 0);
+    sf::IntRect areaToDisplay(position, rectArea);
+    switch (playerColor)
+    {
+    case Game::PlayerColor::Red:
+        // The area of the texture that needs to be displayed is set to Red by default
+        break;
+    case Game::PlayerColor::Black:
+        position.y = 20;
+        areaToDisplay = sf::IntRect(position, rectArea);
+        break;
+    case Game::PlayerColor::White:
+        position.y = 40;
+        areaToDisplay = sf::IntRect(position, rectArea);
+        break;
+    default:
+        std::cout << "Error in winDisplaySetup() PlayerColor is invalid" << std::endl;
+        break;
+    }
+
+    _winSprite.setTextureRect(areaToDisplay);
+    _winSprite.setScale(2.0f, 2.0f);
+    // Scaling for the whole window happens later. So here we use the default window size (the initial window size).
+    _winSprite.setPosition((_board.getBoardLength() - rectArea.x * _winSprite.getScale().x) / 2,
+                           (_board.getBoardLength() - rectArea.y * _winSprite.getScale().y) / 2);
+}
+void Game::winCheck()
+{
+    if (_possibleMoves.empty() && !_gameOver)
+    {
+        if (_turn == 2) // Black/White can't play
+        {
+            winDisplaySet(PlayerColor::Red);
+            std::cout << "Red Wins" << std::endl;
+        }
+
+        else // Red can't play
+        {
+            if (_player2Color == PlayerColor::Black)
+            {
+                winDisplaySet(PlayerColor::Black);
+                std::cout << "Black Wins" << std::endl;
+            }
+            else
+            {
+                winDisplaySet(PlayerColor::White);
+                std::cout << "White Wins" << std::endl;
+            }
+        }        
+        _gameOver = true;
+    }
+}
 
 void Game::drawSelf()
 {
     _gfx.clear();
     _board.drawSelf(_gfx);
     displayMoves();
+    if(_gameOver)
+        winDisplay();
     _gfx.display();
 }
 
+void Game::getMoves()
+{
+    if (!_gameOver)
+    {
+        // Get possible piece moves
+        if (!areAdditionalJumps())
+        {
+            // Don't generate new moves if a move has yet to be made
+            if (_possibleMoves.empty())
+            {
+                _board.generateMoves(_possibleMoves, _turn);
+                addHistogramData(_possibleMoves.size());
+            }
+        }
+        else
+            loadAdditionalJumps();
+    }
+}
+void Game::conductMoves()
+{
+    if (!_gameOver)
+    {
+        if (isUserTurn())
+            userInputHandle();
+        else
+        {
+            Sleep(200);
+            makeRandomMove();
+
+            drawSelf();
+            Sleep(200);
+        }
+    }
+}
+
+void Game::setSelectedIndex()
+{
+    auto pos = (sf::Mouse::getPosition() - _gfx.getPosition()) + sf::Vector2i(-8, -31);
+    if (pos.x >= 0 && pos.x < _gfx.getSize().x)
+        if (pos.y >= 0 && pos.y < _gfx.getSize().y)
+        {
+            pos.x /= (_gfx.getSize().x / 8);
+            pos.y /= (_gfx.getSize().y / 8);
+            _userSelectedIndex = _board.xyToIndex(pos.x, pos.y);
+        }
+}
 void Game::userInputHandle()
 {
     if (_userSelectedIndex >= 0 && _userSelectedIndex < 32)
@@ -189,7 +280,7 @@ void Game::userInputHandle()
 }
 bool Game::isUserTurn()
 {
-    return _playerTurn == _turn;
+    return _userTurn == _turn;
 }
 void Game::makeUserMove()
 {
@@ -198,6 +289,7 @@ void Game::makeUserMove()
         finalizeMove();
     }
 }
+// True if the move given is in the possible moves
 bool Game::findMoveMatch(int indexFrom, int indexTo)
 {
     for (auto move : _possibleMoves)

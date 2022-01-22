@@ -9,7 +9,7 @@ This is the file that contains main and will run the program
 
 int main()
 {
-	Game game(Game::PlayerColor::CPU_playerGame);
+	Game game(Game::PlayerColor::CPU_playerGame, {512, 512}, Game::PlayerColor::Black);
 	game.run();
 
 	game.displayStats();

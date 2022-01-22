@@ -24,23 +24,23 @@ enum class PieceType
 class Board
 {
 public:
-	Board();
+	Board(bool player2IsBlack = true);
 	~Board();
 
 	void drawSelf(sf::RenderWindow& gfx);
 
 private:
 	void setup();
-	void playerPieceDisplaySetup();
+	void playerPieceDisplaySetup(bool player2IsBlack);
 
 	void drawPiece(sf::RenderWindow& gfx, sf::Vector2<float> position, int tilesIndex);
 
 	void pieceTypeToCout(PieceType pieceType);
 
 public:
-	sf::Vector2<float> indexToPosition(int tileIndex);
-	int xyToIndex(int x, int y);
-	sf::Vector2<int> indexToXY(int tileIndex);
+	static sf::Vector2<float> indexToPosition(int tileIndex);
+	static int xyToIndex(int x, int y);
+	static sf::Vector2<int> indexToXY(int tileIndex);
 
 	// {-1, -1} if invalid, otherwise returns {from, to}
 	sf::Vector3<int> getMoveToIndex(int tileIndex, int movement);

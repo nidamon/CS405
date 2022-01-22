@@ -7,10 +7,10 @@ This is the cpp file for the board class.
 
 #include "board.h"
 
-Board::Board() : _tiles(std::vector<PieceType>(32, PieceType::NoPiece))
+Board::Board(bool player2IsBlack) : _tiles(std::vector<PieceType>(32, PieceType::NoPiece))
 {
 	setup();
-	playerPieceDisplaySetup();
+	playerPieceDisplaySetup(player2IsBlack);
 
 	if (!_boardTexture.loadFromFile("CheckerBoard.png"))
 		std::cout << "Error in board image load" << std::endl;
@@ -37,19 +37,41 @@ void Board::setup()
 }
 
 // Piece diplay setup
-void Board::playerPieceDisplaySetup()
-{	
+void Board::playerPieceDisplaySetup(bool player2IsBlack)
+{
 	bool textureTest = true;
 	if (!_player1PiecePawnTexture.loadFromFile("RedPawnBase.png"))
 		textureTest = false;
-	if (!_player2PiecePawnTexture.loadFromFile("BlackPawnBase.png"))
-		textureTest = false;
+
+	// Black or White Piece
+	if (player2IsBlack)
+	{
+		if (!_player2PiecePawnTexture.loadFromFile("BlackPawnBase.png"))
+			textureTest = false;
+	}
+	else
+	{
+		if (!_player2PiecePawnTexture.loadFromFile("WhitePawnBase.png"))
+			textureTest = false;
+	}
+
+
 	if (!_player1PieceKingTexture.loadFromFile("RedKing.png"))
 		textureTest = false;
-	if (!_player2PieceKingTexture.loadFromFile("BlackKing.png"))
-		textureTest = false;
 
-	if(!textureTest)
+	// Black or White King
+	if (player2IsBlack)
+	{
+		if (!_player2PieceKingTexture.loadFromFile("BlackKing.png"))
+			textureTest = false;
+	}
+	else 
+	{
+		if (!_player2PieceKingTexture.loadFromFile("WhiteKing.png"))
+			textureTest = false;
+	}
+
+	if (!textureTest)
 		std::cout << "Error in piece image load" << std::endl;
 
 
