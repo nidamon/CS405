@@ -2,7 +2,7 @@
 Nathan Damon
 CS 405
 1/18/2022
-This is the cpp file for the board class.
+This is the source file for the board class.
 */
 
 #include "board.h"
@@ -307,17 +307,26 @@ void Board::generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int tea
 				[](const sf::Vector3<int> move) {return move.z == -1; }), generatedMoves.end());
 }
 
-void Board::movePiece(sf::Vector3<int> move)
+// Returns true if a piece was crowned
+bool Board::movePiece(sf::Vector3<int> move)
 {
 	std::swap(_tiles[move.x], _tiles[move.y]);
 	// Crowning
+	bool didCrown = false;
 	if (move.y < 4 && _tiles[move.y] == PieceType::Player2_Pawn)
+	{
 		_tiles[move.y] = PieceType::Player2_King;
+		didCrown = true;
+	}
 	if (move.y > 27 && _tiles[move.y] == PieceType::Player1_Pawn)
+	{
 		_tiles[move.y] = PieceType::Player1_King;
+		didCrown = true;
+	}
 
 	// Remove jumped piece
 	removePiece(move.z);
+	return didCrown;
 }
 
 void Board::removePiece(int location)

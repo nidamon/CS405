@@ -1,0 +1,74 @@
+Total Games Played: 29
+P1 to P2 Wins: 20 : 9 (68.9655% P1 victory)
+Turns:
+  Totaled - (Num of turns, games with this many turns): (34,1),(38,1),(39,1),(40,2),(44,1),(45,2),(47,2),(48,4),(50,1),(55,1),(56,1),(57,1),(58,1),(68,1),(75,1),(84,1),(92,1),(94,2),(96,1),(99,1),(106,1),(150,1)
+  MinModeMax turns taken: 34, 48, 150
+  MedianAverage turns taken: 48, 63.6207
+MovesGenerated:
+ Generations:
+  Totaled - (Num available moves, times generated): (0,29),(1,399),(2,164),(3,62),(4,141),(5,83),(6,158),(7,247),(8,198),(9,156),(10,96),(11,57),(12,28),(13,16),(14,7),(15,4)
+  MinModeMax: 0, 1, 15
+  MedianAverage: 6, 5.33659
+  Average max move generations per game: 12.2415
+Moves:
+  MinMax number of moves generated per game: 175, 865
+  Average number of moves generated per game: 339.517
+  Average median number of moves generated per turn: 5.27587
+
+Player1: CPU
+Player2: CPU
+Games Played: 16
+P1 to P2 Wins: 11 : 5 (68.75% P1 victory)
+Turns:
+  Totaled - (Num of turns, games with this many turns): (34,1),(40,2),(45,1),(48,1),(50,1),(55,1),(56,1),(57,1),(75,1),(84,1),(92,1),(94,1),(99,1),(106,1),(150,1)
+  MinModeMax turns taken: 34, 40, 150
+  MedianAverage turns taken: 56, 70.3125
+MovesGenerated:
+ Generations:
+  Totaled - (Num available moves, times generated): (0,16),(1,240),(2,104),(3,32),(4,98),(5,54),(6,119),(7,146),(8,133),(9,104),(10,47),(11,21),(12,6),(13,5)
+  MinModeMax: 0, 1, 13
+  MedianAverage: 6, 5.13778
+  Average max move generations per game: 10.875
+Moves:
+  MinMax number of moves generated per game: 175, 865
+  Average number of moves generated per game: 361.25
+  Average median number of moves generated per turn: 3.93751
+
+Player1: User
+Player2: CPU
+Games Played: 9
+P1 to P2 Wins: 9 : 0 (100% P1 victory)
+Turns:
+  Totaled - (Num of turns, games with this many turns): (38,1),(44,1),(48,3),(58,1),(68,1),(94,1),(96,1)
+  MinModeMax turns taken: 38, 48, 96
+  MedianAverage turns taken: 48, 60.2222
+MovesGenerated:
+ Generations:
+  Totaled - (Num available moves, times generated): (0,9),(1,117),(2,45),(3,19),(4,34),(5,18),(6,32),(7,70),(8,54),(9,41),(10,41),(11,30),(12,17),(13,9),(14,5),(15,1)
+  MinModeMax: 0, 1, 15
+  MedianAverage: 6, 5.75461
+  Average max move generations per game: 13
+Moves:
+  MinMax number of moves generated per game: 203, 630
+  Average number of moves generated per game: 346.556
+  Average median number of moves generated per turn: 5.55556
+
+Player1: CPU
+Player2: User
+Games Played: 4
+P1 to P2 Wins: 0 : 4 (0% P1 victory)
+Turns:
+  Totaled - (Num of turns, games with this many turns): (39,1),(45,1),(47,2)
+  MinModeMax turns taken: 39, 47, 47
+  MedianAverage turns taken: 45, 44.5
+MovesGenerated:
+ Generations:
+  Totaled - (Num available moves, times generated): (0,4),(1,42),(2,15),(3,11),(4,9),(5,11),(6,7),(7,31),(8,11),(9,11),(10,8),(11,6),(12,5),(13,2),(14,2),(15,3)
+  MinModeMax: 0, 1, 15
+  MedianAverage: 5, 5.32022
+  Average max move generations per game: 14.5
+Moves:
+  MinMax number of moves generated per game: 213, 266
+  Average number of moves generated per game: 236.75
+  Average median number of moves generated per turn: 4.5
+

@@ -9,8 +9,8 @@ This is the header file for the board class which handles the board.
 #define BOARD_H
 
 #include <SFML\Graphics.hpp>
-#include <vector>
-#include <iostream>
+#include "stats.h"
+#include <Windows.h>
 
 enum class PieceType
 {
@@ -59,7 +59,8 @@ public:
 	bool getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int index, int teamTurn);
 	void generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int teamTurn);
 
-	void movePiece(sf::Vector3<int> move);
+	// Returns true if a piece was crowned
+	bool movePiece(sf::Vector3<int> move);
 	void removePiece(int location);
 
 private:

@@ -2,7 +2,7 @@
 Nathan Damon
 CS 405
 1/18/2022
-This is the cpp file for the game class.
+This is the source file for the game class.
 */
 
 #include "game.h"
@@ -85,35 +85,6 @@ void Game::displayMoves()
         _gfx.draw(lines);
     }
 }
-void Game::displayStats()
-{
-    for (size_t i = 0; i < _histogramData.size(); i++)
-    {
-        if (i != 0)
-            std::cout << ",";
-        std::cout << "(" << i << "," << _histogramData[i] << ")";
-    }
-    std::cout << std::endl;
-    std::cout << "MovesGenerated: " << std::endl;
-    std::cout << "Max: " << _maxMovesGenerated << std::endl;
-    std::cout << "Min: " << _minMovesGenerated << std::endl;
-
-    // Total generations
-    int totalMoveGenerations = 0;
-    for (size_t i = 0; i < _histogramData.size(); i++)
-    {
-        totalMoveGenerations += _histogramData[i];
-    }
-    std::cout << "Total generations: " << totalMoveGenerations << std::endl;
-
-    int totalMovesGenerated = 0;
-    for (size_t i = 0; i < _histogramData.size(); i++)
-    {
-        totalMovesGenerated += i * _histogramData[i];
-    }
-    std::cout << "Total moves generated: " << totalMovesGenerated << std::endl;
-    std::cout << "Average: " << totalMovesGenerated / totalMoveGenerations << std::endl;
-}
 
 void Game::setupWinSprite()
 {
@@ -156,7 +127,7 @@ void Game::winDisplaySet(PlayerColor playerColor)
                            (_board.getBoardLength() - rectArea.y * _winSprite.getScale().y) / 2);
 }
 void Game::winCheck()
-{
+{ 
     if (_possibleMoves.empty() && !_gameOver)
     {
         if (_turn == 2) // Black/White can't play
@@ -164,7 +135,6 @@ void Game::winCheck()
             winDisplaySet(PlayerColor::Red);
             std::cout << "Red Wins" << std::endl;
         }
-
         else // Red can't play
         {
             if (_player2Color == PlayerColor::Black)
@@ -179,6 +149,8 @@ void Game::winCheck()
             }
         }        
         _gameOver = true;
+        _stats.updateRawGameDataSheet(_turn, _userTurn);
+        _stats.displayStats();
     }
 }
 
@@ -210,7 +182,7 @@ void Game::getMoves()
             if (_possibleMoves.empty())
             {
                 _board.generateMoves(_possibleMoves, _turn);
-                addHistogramData(_possibleMoves.size());
+                _stats.addTurnData(_possibleMoves.size());
             }
         }
         else
@@ -320,21 +292,21 @@ void Game::makeRandomMove()
 }
 void Game::finalizeMove()
 {
-    _board.movePiece(_latestMove);
     _possibleMoves.clear();
 
-    if (_latestMove.z != -1) // We just jumped
-    {
-        if (_board.getIndividualPieceMoves(_possibleAdditionalJumps, _latestMove.y, _turn))
+    if (!_board.movePiece(_latestMove))
+        if (_latestMove.z != -1) // We just jumped and no piece has been crowned
         {
-            _possibleAdditionalJumps.erase(
-                std::remove_if(_possibleAdditionalJumps.begin(), _possibleAdditionalJumps.end(),
-                    [](const sf::Vector3<int> move) {return move.z == -1; }), _possibleAdditionalJumps.end());
-            return; // Don't change turns
+            if (_board.getIndividualPieceMoves(_possibleAdditionalJumps, _latestMove.y, _turn))
+            {
+                _possibleAdditionalJumps.erase(
+                    std::remove_if(_possibleAdditionalJumps.begin(), _possibleAdditionalJumps.end(),
+                        [](const sf::Vector3<int> move) {return move.z == -1; }), _possibleAdditionalJumps.end());
+                return; // Don't change turns
+            }
+            // No jumps but still need to clear
+            _possibleAdditionalJumps.clear();
         }
-        // No jumps but still need to clear
-        _possibleAdditionalJumps.clear();
-    }
 
     // Change turn if current player has made a move and has no additional jumps to make
     if (!areAdditionalJumps())
@@ -357,17 +329,4 @@ bool Game::areAdditionalJumps()
 int Game::getBoardTile(size_t index)
 {
     return int(_board.getBoardTiles()[index]);
-}
-
-void Game::addHistogramData(int movesGenerated)
-{
-    if (movesGenerated > _maxMovesGenerated)
-        _maxMovesGenerated = movesGenerated;
-    if (_minMovesGenerated > movesGenerated)
-        _minMovesGenerated = movesGenerated;
-
-    if (_histogramData.size() <= movesGenerated)
-        _histogramData.resize(movesGenerated + 1, 0);
-
-    ++_histogramData[movesGenerated];    
 }

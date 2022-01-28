@@ -9,8 +9,6 @@ This is the header file for the game class that will handle the game.
 #define GAME_H
 
 #include "board.h"
-#include <Windows.h>
-#include <random>
 
 class Game
 {
@@ -30,7 +28,6 @@ public:
 
 	void nextTurn();
 	void displayMoves();
-	void displayStats();
 private:
 	void setupWinSprite();
 	void winDisplay();
@@ -58,8 +55,6 @@ private:
 	bool areAdditionalJumps();
 
 	int getBoardTile(size_t index);
-	
-	void addHistogramData(int movesGenerated);
 
 	int _turn = 1;
 	bool _gameOver = false;
@@ -78,10 +73,7 @@ private:
 	sf::Texture _winTexture;
 	sf::Sprite _winSprite;
 
-
-	int _maxMovesGenerated = 0;
-	int _minMovesGenerated = 100;
-	std::vector<int> _histogramData;
+	Stats _stats;
 };
 
 
