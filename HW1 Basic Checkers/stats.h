@@ -88,6 +88,9 @@ private:
 	int _turnsTaken = 0;
 	std::vector<int> _statisticsData;
 
+	// Save files
+	std::string _overallCheckersStatsFileName = "OverallCheckersStats.txt";
+	std::string _rawGameDataFileName = "RawGameData.txt";
 };
 
 #endif // !STATS_H

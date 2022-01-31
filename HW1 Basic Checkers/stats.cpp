@@ -273,11 +273,13 @@ void Stats::updateRawGameDataSheet(int turn, int userTurn)
 {
     int gameNumber = 0;
     // Getting the current game's number from the OverallCheckersStats text file
-    std::ifstream fin("OverallCheckersStats.txt", std::ios::binary);
+    std::ifstream fin(_overallCheckersStatsFileName, std::ios::binary);
+    if (!fin)
+        fin = std::ifstream("Debug/" + _overallCheckersStatsFileName, std::ios::binary);
     if (!fin)
     {
-        std::cout << "ERROR: Did not open the OverallCheckersStats text file." << std::endl;
-        return;
+        std::cout << "ERROR: Did not open the OverallCheckersStats text file. Setting game number to 1" << std::endl;
+        gameNumber = 1;
     }
     else
     {
@@ -297,10 +299,23 @@ void Stats::updateRawGameDataSheet(int turn, int userTurn)
         }
     }
 
-    std::ofstream fout("RawGameData.txt", std::ios::binary | std::ios::app);
+    // Check for location of file
+    std::string filePath = _rawGameDataFileName;
+    std::ifstream finTest(filePath, std::ios::binary);
+    if (!finTest)
+    {
+        filePath = "Debug/" + filePath;
+        finTest = std::ifstream(filePath, std::ios::binary);
+
+        // If there is no file, make a file within the project's or executable's folder
+        if(!finTest)
+            filePath = _rawGameDataFileName;
+    }
+
+    std::ofstream fout(filePath, std::ios::binary | std::ios::app);
     if (!fout)
     {
-        std::cout << "ERROR: Did not open the RawGameData text file." << std::endl;
+        std::cout << "ERROR: Bad file write." << std::endl;
         return;
     }
     else
@@ -411,7 +426,9 @@ void Stats::updateRawGameDataSheet(int turn, int userTurn)
 void Stats::getAndUpdateOverallCheckersData(int userTurn)
 {
     // Get the overall game data for all games
-    std::ifstream fin("OverallCheckersStats.txt", std::ios::binary);
+    std::ifstream fin(_overallCheckersStatsFileName, std::ios::binary);
+    if (!fin)
+        fin = std::ifstream("Debug/" + _overallCheckersStatsFileName, std::ios::binary);
     if (!fin)
     {
         std::cout << "ERROR: Did not open the OverallCheckersStats text file." << std::endl;
@@ -612,11 +629,24 @@ void Stats::getAndUpdateOverallCheckersData(int userTurn)
 
 void Stats::saveNewStats()
 {
+    // Check for location of file
+    std::string filePath = _overallCheckersStatsFileName;
+    std::ifstream finTest(filePath, std::ios::binary);
+    if (!finTest)
+    {
+        filePath = "Debug/" + filePath;
+        finTest = std::ifstream(filePath, std::ios::binary);
+
+        // If there is no file, make a file within the project's or executable's folder
+        if (!finTest)
+            filePath = _rawGameDataFileName;
+    }
+
     // Overwrite OverallGameData in file
-    std::ofstream fout("OverallCheckersStats.txt", std::ios::binary | std::ios::out);
+    std::ofstream fout(filePath, std::ios::binary | std::ios::out);
     if (!fout)
     {
-        std::cout << "ERROR: Did not open the OverallCheckersStats text file." << std::endl;
+        std::cout << "ERROR: Bad file write." << std::endl;
         return;
     }
     else
