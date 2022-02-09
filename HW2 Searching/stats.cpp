@@ -159,6 +159,7 @@ int Data::getMedian(const std::vector<std::pair<int, int>>& dataVector, int tota
         if (gameSum >= totalAmount / 2) // Return the median number of turns
             return dataVector[i].first;
     }
+    return 0;
 }
 // Returns the average as per the totalAmount
 float Data::getAverage(const std::vector<std::pair<int, int>>& dataVector, int totalAmount) {
@@ -269,12 +270,16 @@ void Stats::displayStats()
     std::cout << "Total moves generated: " << totalMovesGenerated << std::endl;
     std::cout << "Average: " << totalMovesGenerated / totalMoveGenerations << std::endl;
 }
+void Stats::setDepthOfSearch(int depthOfSearch)
+{
+    _depthOfSearch = depthOfSearch;
+}
 
 void Stats::addTurnData(int movesGenerated, sf::Vector3<int> moveMade)
 {
     _movesMade.push_back(moveMade);
 
-    if (_statisticsData.size() <= movesGenerated)
+    if ((int)_statisticsData.size() <= movesGenerated)
         _statisticsData.resize(movesGenerated + 1, 0);
 
     ++_statisticsData[movesGenerated];
@@ -432,6 +437,7 @@ void Stats::updateRawGameDataSheet(int turn, int userTurn)
             << "Player1: " << player1 << "\n"
             << "Player2: " << player2 << "\n"
             << "Player " << playerThatWon << " Won\n"
+            << "DepthOfSearch: " << _depthOfSearch << "\n"
             << "Turns Taken: " << _movesMade.size() << "\n"
             << "MovesMade:\n " 
             << "  (Initial Pos, Destination, Jumped index if not -1): " << movesMade << "\n"

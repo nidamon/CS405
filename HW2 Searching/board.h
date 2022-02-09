@@ -48,21 +48,25 @@ public:
 	void setPieceScale(float newScale);
 
 	std::vector<PieceType>& getBoardTiles();
-	int getBoardLength();
-	float getTileWidth();
-	sf::Vector2<float> getPieceOffset();
-	float getHalfPieceLength();
+	const int getBoardLength();
+	const float getTileWidth();
+	const sf::Vector2<float> getPieceOffset();
+	const float getHalfPieceLength();
 	void setBoardLength(int newBoardLength);
-	int getBoardCount();
+	const int getBoardCount();
 	   
 	// Movement
 	// Finds the moves of a given piece (looks for jumps if getJumps is true or regular moves if false)
 	void getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int index, int teamTurn, bool getJumps);
 	void generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int teamTurn);
+	// Returns a set of tiles with the given move made
+	static std::vector<PieceType> portrayMove(std::vector<PieceType>& tiles, const sf::Vector3<int>& move);
 
 	// Returns true if a piece was crowned
 	bool movePiece(sf::Vector3<int> move);
+	static bool movePiece(std::vector<PieceType>& tiles, sf::Vector3<int> move);
 	void removePiece(int location);
+	static void removePiece(std::vector<PieceType>& tiles, int location);
 
 private:
 	// Functional

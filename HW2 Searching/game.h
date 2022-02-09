@@ -48,13 +48,17 @@ private:
 	// True if the move given is in the possible moves
 	bool findMoveMatch(int indexFrom, int indexTo);
 
-	// If minimize, then will return the smallest value, else largest value
-	int boardEvaluate(bool minimize);
+	// returns difference of piece values with respect to teamTurn
+	float boardEvaluate(const std::vector<PieceType> tiles, int teamTurn);
 	// Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-	sf::Vector2<int> miniMax(Board board, int player, int depth);
+	float miniMax(Board& board, const int teamTurn, const int depth, const bool getMin);
+	// Returns the optimal move upon a DFS of x turns of possible moves
+	sf::Vector3<int> miniMaxCall();
+	// Sets the search depth of miniMaxCall()
+	void setDepthOfSearch(int depthOfSearch);
 
-
-	void makeRandomMove();
+	// Uses miniMax function to pick a move
+	void makeMiniMaxMove();
 	void finalizeMove();
 
 	void loadAdditionalJumps();
@@ -67,6 +71,14 @@ private:
 	sf::Vector3<int> _latestMove;
 	std::vector<sf::Vector3<int>> _possibleMoves;
 	std::vector<sf::Vector3<int>> _possibleAdditionalJumps;
+
+	// MiniMax piece weights
+	float _pawnWeight = 1.0f;
+	float _kingWeight = 1.5f;
+	int _depthOfSearch = 0;
+
+	int _miniMaxCalls = 0;
+	int _evaluationCalls = 0;
 
 	int _userTurn = 1;
 	int _userSelectedIndex = -1;

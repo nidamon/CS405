@@ -32,6 +32,7 @@ Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2C
         _player2Color = PlayerColor::White;
 
     setupWinSprite();    
+    setDepthOfSearch(6);
 }
 
 Game::~Game()
@@ -195,7 +196,7 @@ void Game::conductMoves()
         else
         {
             Sleep(200);
-            makeRandomMove();
+            makeMiniMaxMove();
 
             drawSelf();
             Sleep(200);
@@ -275,23 +276,145 @@ bool Game::findMoveMatch(int indexFrom, int indexTo)
     return false;
 }
 
-// If minimize, then will return the smallest value, else largest value
-int boardEvaluate(bool minimize)
+// returns difference of piece values with respect to teamTurn
+float Game::boardEvaluate(const std::vector<PieceType> tiles, int teamTurn)
 {
-    return 0;
+    ++_evaluationCalls;
+    float evaluation = 0.0f;
+    for (size_t index = 0; index < tiles.size(); index++)
+    {
+        switch (tiles[index])
+        {
+        case PieceType::NoPiece:
+            break;
+        case PieceType::Player1_Pawn:
+            evaluation += _pawnWeight;
+            break;
+        case PieceType::Player2_Pawn:
+            evaluation -= _pawnWeight;
+            break;
+        case PieceType::Player1_King:
+            evaluation += _kingWeight;
+            break;
+        case PieceType::Player2_King:
+            evaluation -= _kingWeight;
+            break;
+        default:
+            break;
+        }
+    }
+    if (teamTurn == 2)
+        evaluation = -evaluation;
+    return evaluation;
 }
 // Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-sf::Vector2<int> miniMax(Board board, int player, int depth)
+float Game::miniMax(Board& board, const int teamTurn, const int depth, const bool getMin)
 {
-    return { 0, 0 };
+    ++_miniMaxCalls;
+    float minMax = 10000.0f;
+    if (!getMin)
+        minMax = -minMax;
+    if (depth > 0)
+    { 
+        float holder;
+        int jumpAdjustment = 0;
+        std::vector<sf::Vector3<int>> possibleMoves;
+        board.generateMoves(possibleMoves, teamTurn);
+
+        if (possibleMoves.size() > 0) 
+        {
+            if (possibleMoves[0].z != -1) // Check if jump
+                jumpAdjustment = 1;
+            for (size_t i = 0; i < possibleMoves.size(); i++)
+            {
+                Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
+                holder = miniMax(newBoard, (teamTurn + 1) % 2, depth - 1 + jumpAdjustment, !getMin);
+
+                if (getMin)
+                {
+                    if (holder < minMax)
+                        minMax = holder;
+                }
+                else // GetMax
+                {
+                    if (holder > minMax)
+                        minMax = holder;
+                }
+            }
+            return minMax;
+        }
+        else // No moves available means game over
+        {
+            if (getMin)
+            {
+                return -1000.0f; // Win
+            }
+            else // GetMax
+            {
+                return 1000.0f; // Loss
+            }
+        }
+    }
+    else
+        return boardEvaluate(board.getBoardTiles(), teamTurn);
+}
+// Returns the optimal move upon a DFS of x turns of possible moves
+sf::Vector3<int> Game::miniMaxCall()
+{
+    std::vector<sf::Vector3<int>> optimalMove;
+    float max = -10000.0f;
+    float holder;
+
+    int jumpAdjustment = 0;
+    if (_possibleMoves[0].z != -1) // Check if jump
+        jumpAdjustment = 1;
+
+    // First depth call here
+    if (_depthOfSearch > 0 && (int)_possibleMoves.size() > 1)
+    {
+        for (size_t i = 0; i < _possibleMoves.size(); i++)
+        {
+            Board newBoard(Board::portrayMove(_board.getBoardTiles(), _possibleMoves[i]));
+            holder = miniMax(newBoard, (_turn + 1) % 2, _depthOfSearch - 1 + jumpAdjustment, false);
+
+            std::cout << holder << "  (Initial Pos, Destination, Jumped index if not -1) { " << _possibleMoves[i].x << ", " << _possibleMoves[i].y << ", " << _possibleMoves[i].z << " }" << std::endl;
+
+
+            if (holder > max || optimalMove.size() == 0)
+            {
+                optimalMove.clear();
+
+                optimalMove.push_back(_possibleMoves[i]);
+                max = holder;
+            }
+            if(holder == max)
+                optimalMove.push_back(_possibleMoves[i]);
+        }
+    }
+    else
+        return _possibleMoves[(int(randPercent(gen) * float(int(_possibleMoves.size()) + 1))) % _possibleMoves.size()];
+    // Return a random optimal move (for when several options seem eqaully optimal)
+    return optimalMove[(int(randPercent(gen) * float(int(optimalMove.size()) + 1))) % optimalMove.size()];
+}
+// Sets the search depth of miniMaxCall()
+void Game::setDepthOfSearch(int depthOfSearch)
+{
+    _depthOfSearch = depthOfSearch;
+    _stats.setDepthOfSearch(depthOfSearch);
 }
 
-void Game::makeRandomMove()
+// Uses miniMax function to pick a move
+void Game::makeMiniMaxMove()
 {
-    // Random
     if (_possibleMoves.size() > 0)
     {
-        _latestMove = _possibleMoves[(int(randPercent(gen) * float(int(_possibleMoves.size()) + 1))) % _possibleMoves.size()];
+        _miniMaxCalls = 0;
+        _evaluationCalls = 0;
+
+        _latestMove = miniMaxCall();
+
+        std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
+        std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
 
         finalizeMove();
     }

@@ -76,6 +76,7 @@ public:
 
 	void updateRawGameDataSheet(int turn, int userTurn);
 
+	void setDepthOfSearch(int depthOfSearch);
 private:
 	void getAndUpdateOverallCheckersData(int userTurn);
 	void saveNewStats();
@@ -87,6 +88,7 @@ private:
 
 	// Temporary statistics data
 	int _victor = 0;
+	int _depthOfSearch = 0;
 	std::vector<sf::Vector3<int>> _movesMade;
 	std::vector<int> _statisticsData;
 

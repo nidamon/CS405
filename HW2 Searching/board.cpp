@@ -220,7 +220,7 @@ sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
 	else
 		moveTo = tileIndex + _evenRowMoveOffsets[movement];
 
-	if (moveTo >= _tiles.size() || moveTo < 0 // 
+	if (moveTo >= (int)_tiles.size() || moveTo < 0 // 
 		|| movement < 4 && abs((tileIndex / 4) - (moveTo / 4)) != 1 // Difference of rows
 		|| movement >= 4 && abs((tileIndex / 4) - (moveTo / 4)) != 2) // Difference of rows
 		return invalidMove;
@@ -278,19 +278,19 @@ std::vector<PieceType>& Board::getBoardTiles()
 {
 	return _tiles;
 }
-int Board::getBoardLength()
+const int Board::getBoardLength()
 {
 	return _length;
 }
-float Board::getTileWidth()
+const float Board::getTileWidth()
 {
 	return _tileWidth;
 }
-sf::Vector2<float> Board::getPieceOffset() 
+const sf::Vector2<float> Board::getPieceOffset()
 {
 	return _pieceOffset;
 }
-float Board::getHalfPieceLength()
+const float Board::getHalfPieceLength()
 {
 	return _halfPieceLength;
 }
@@ -300,7 +300,7 @@ void Board::setBoardLength(int newBoardLength)
 	_tileWidth = float(newBoardLength) / 8.0f;
 	_pieceOffset = { float(_length) / 16.0f - (_halfPieceLength * _pieceScale), float(_length) / 16.0f - (_halfPieceLength * _pieceScale) };
 }
-int Board::getBoardCount()
+const int Board::getBoardCount()
 {
 	return _boardCount;
 }
@@ -318,7 +318,7 @@ void Board::getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int in
 		if (_tiles[index] != PieceType::Player1_Pawn) // It is player2_Pawn, Player1_King, or Player2_King
 		{
 			// Look at moves directed up
-			for (size_t i = jumpMoveIndexOffset; i < 2 + jumpMoveIndexOffset; i++) // 4 moves up possible (second 2 are jumps)
+			for (int i = jumpMoveIndexOffset; i < 2 + jumpMoveIndexOffset; i++) // 4 moves up possible (second 2 are jumps)
 			{
 				move = getMoveToIndex(index, _upAndDownMoves[i]);
 				if (move.x != -1) // Not invalid
@@ -329,7 +329,7 @@ void Board::getIndividualPieceMoves(std::vector<sf::Vector3<int>>& moves, int in
 		if (_tiles[index] != PieceType::Player2_Pawn) // It is player1_Pawn, Player1_King, or Player2_King
 		{
 			// Look at moves directed down
-			for (size_t i = 4 + jumpMoveIndexOffset; i < 6 + jumpMoveIndexOffset; i++) // 4 moves up possible (second 2 are jumps)
+			for (int i = 4 + jumpMoveIndexOffset; i < 6 + jumpMoveIndexOffset; i++) // 4 moves up possible (second 2 are jumps)
 			{
 				move = getMoveToIndex(index, _upAndDownMoves[i]);
 				if (move.x != -1) // Not invalid
@@ -354,30 +354,45 @@ void Board::generateMoves(std::vector<sf::Vector3<int>>& generatedMoves, int tea
 	}
 }
 
+// Returns a set of tiles with the given move made
+std::vector<PieceType> Board::portrayMove(std::vector<PieceType>& tiles, const sf::Vector3<int>& move)
+{
+	std::vector<PieceType> newTiles = tiles;
+	movePiece(newTiles, move);
+	return newTiles;
+}
+
 // Returns true if a piece was crowned
 bool Board::movePiece(sf::Vector3<int> move)
 {
-	std::swap(_tiles[move.x], _tiles[move.y]);
+	return movePiece(_tiles, move);
+}
+bool Board::movePiece(std::vector<PieceType>& tiles, sf::Vector3<int> move)
+{
+	std::swap(tiles[move.x], tiles[move.y]);
 	// Crowning
 	bool didCrown = false;
-	if (move.y < 4 && _tiles[move.y] == PieceType::Player2_Pawn)
+	if (move.y < 4 && tiles[move.y] == PieceType::Player2_Pawn)
 	{
-		_tiles[move.y] = PieceType::Player2_King;
+		tiles[move.y] = PieceType::Player2_King;
 		didCrown = true;
 	}
-	if (move.y > 27 && _tiles[move.y] == PieceType::Player1_Pawn)
+	if (move.y > 27 && tiles[move.y] == PieceType::Player1_Pawn)
 	{
-		_tiles[move.y] = PieceType::Player1_King;
+		tiles[move.y] = PieceType::Player1_King;
 		didCrown = true;
 	}
 
 	// Remove jumped piece
-	removePiece(move.z);
+	removePiece(tiles, move.z);
 	return didCrown;
 }
-
 void Board::removePiece(int location)
 {
-	if(location >= 0 && location < _tiles.size())
-		_tiles[location] = PieceType::NoPiece;
+	removePiece(_tiles, location);
+}
+void Board::removePiece(std::vector<PieceType>& tiles, int location)
+{
+	if(location >= 0 && location < (int)tiles.size())
+		tiles[location] = PieceType::NoPiece;
 }
