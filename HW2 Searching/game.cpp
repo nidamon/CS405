@@ -11,6 +11,10 @@ std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
+Game::Game(bool tests) 
+{
+}
+
 Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
     : _board(setPlayer2Color(playerColor, player2Color)),
       _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
@@ -32,7 +36,7 @@ Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2C
         _player2Color = PlayerColor::White;
 
     setupWinSprite();    
-    setDepthOfSearch(6);
+    setDepthOfSearch(2);
 }
 
 Game::~Game()
@@ -70,6 +74,69 @@ void Game::run()
         conductMoves();
     }
 }
+void Game::doTests()
+{
+    int testsPassed = 0;
+
+    PieceType _ = PieceType::NoPiece;
+    PieceType r = PieceType::Player1_Pawn;
+    PieceType b = PieceType::Player2_Pawn;
+    PieceType R = PieceType::Player1_King;
+    PieceType B = PieceType::Player2_King;
+    std::vector<PieceType> testTiles = {
+    	/**/ _, /**/ _, /**/ _, /**/ _,
+    	 R, /**/ _, /**/ _, /**/ _, /**/
+    	/**/ b, /**/ B, /**/ _, /**/ _,
+    	 _, /**/ _, /**/ R, /**/ _, /**/
+    	/**/ b, /**/ b, /**/ b, /**/ _,
+    	 _, /**/ _, /**/ _, /**/ _, /**/
+    	/**/ _, /**/ _, /**/ b, /**/ _,
+         _, /**/ _, /**/ _, /**/ _, /**/
+    };
+
+    std::vector<PieceType> expectedResultTiles = {
+    	/**/ _, /**/ _, /**/ _, /**/ _,
+    	 R, /**/ _, /**/ _, /**/ _, /**/
+    	/**/ b, /**/ B, /**/ _, /**/ _,
+    	 _, /**/ _, /**/ R, /**/ _, /**/
+    	/**/ b, /**/ b, /**/ b, /**/ _,
+    	 _, /**/ _, /**/ _, /**/ _, /**/
+    	/**/ _, /**/ _, /**/ b, /**/ _,
+         r, /**/ _, /**/ _, /**/ _, /**/
+    };
+
+    //std::vector<PieceType> expectedResultTiles = {
+    //	/**/ _, /**/ _, /**/ _, /**/ _,
+    //	 R, /**/ _, /**/ _, /**/ _, /**/
+    //	/**/ _, /**/ _, /**/ _, /**/ _,
+    //	 _, /**/ _, /**/ _, /**/ _, /**/
+    //	/**/ _, /**/ _, /**/ _, /**/ _,
+    //	 _, /**/ _, /**/ _, /**/ _, /**/
+    //	/**/ _, /**/ _, /**/ _, /**/ _,
+    //     _, /**/ _, /**/ R, /**/ _, /**/
+    //};
+
+
+    testsPassed += test("Long Jump test", testTiles, expectedResultTiles);
+
+
+
+    if (testsPassed == _testCount)
+        std::cout << "\nTests: All PASSED\n\n";
+    else
+        std::cout << "\nTests: " << _testCount - testsPassed << " FAILED, " << testsPassed << " PASSED\n";
+}
+bool Game::test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<PieceType>& finalBoardTiles)
+{
+    ++_testCount;
+    if (initialBoardTiles != finalBoardTiles)
+    {
+        std::cout << testName + ": FAILED\n";
+        return false;
+    }
+    return true;
+}
+
 void Game::nextTurn()
 {
 	if (++_turn > 2)
@@ -326,9 +393,24 @@ float Game::miniMax(Board& board, const int teamTurn, const int depth, const boo
             if (possibleMoves[0].z != -1) // Check if jump
                 jumpAdjustment = 1;
             for (size_t i = 0; i < possibleMoves.size(); i++)
-            {
+            {   
+                bool getMinTemp = !getMin;
+                int teamAdjustment = 1;
                 Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
-                holder = miniMax(newBoard, (teamTurn + 1) % 2, depth - 1 + jumpAdjustment, !getMin);
+
+                // Look for additional jumps
+                if (jumpAdjustment == 1)
+                {
+                    std::vector<sf::Vector3<int>> additionalJumps;
+                    newBoard.getIndividualPieceMoves(additionalJumps, possibleMoves[i].y, teamTurn, true);
+                    if (additionalJumps.size() > 0)
+                    {
+                        getMinTemp = !getMinTemp;
+                        teamAdjustment = 0;
+                    }
+                }
+
+                holder = miniMax(newBoard, (teamTurn % 2) + teamAdjustment, depth - 1 + jumpAdjustment, getMinTemp);
 
                 if (getMin)
                 {
@@ -347,11 +429,11 @@ float Game::miniMax(Board& board, const int teamTurn, const int depth, const boo
         {
             if (getMin)
             {
-                return -1000.0f; // Win
+                return 1000.0f; // Win
             }
             else // GetMax
             {
-                return 1000.0f; // Loss
+                return -1000.0f; // Loss
             }
         }
     }
@@ -364,8 +446,8 @@ sf::Vector3<int> Game::miniMaxCall()
     std::vector<sf::Vector3<int>> optimalMove;
     float max = -10000.0f;
     float holder;
-
     int jumpAdjustment = 0;
+
     if (_possibleMoves[0].z != -1) // Check if jump
         jumpAdjustment = 1;
 
@@ -374,10 +456,25 @@ sf::Vector3<int> Game::miniMaxCall()
     {
         for (size_t i = 0; i < _possibleMoves.size(); i++)
         {
+            bool getMinTemp = true;
+            int teamAdjustment = 1;
             Board newBoard(Board::portrayMove(_board.getBoardTiles(), _possibleMoves[i]));
-            holder = miniMax(newBoard, (_turn + 1) % 2, _depthOfSearch - 1 + jumpAdjustment, false);
 
-            std::cout << holder << "  (Initial Pos, Destination, Jumped index if not -1) { " << _possibleMoves[i].x << ", " << _possibleMoves[i].y << ", " << _possibleMoves[i].z << " }" << std::endl;
+            // Look for additional jumps
+            if (jumpAdjustment == 1)
+            {
+                std::vector<sf::Vector3<int>> additionalJumps;
+                newBoard.getIndividualPieceMoves(additionalJumps, _possibleMoves[i].y, _turn, true);
+                if (additionalJumps.size() > 0)
+                {
+                    getMinTemp = !getMinTemp;
+                    teamAdjustment = 0;
+                }
+            }
+
+            holder = miniMax(newBoard, (_turn % 2) + teamAdjustment, _depthOfSearch - 1 + jumpAdjustment, getMinTemp);
+
+            std::cout << holder << "  (Pos, Destination, Jumped) { " << _possibleMoves[i].x << ", " << _possibleMoves[i].y << ", " << _possibleMoves[i].z << " }" << std::endl;
 
 
             if (holder > max || optimalMove.size() == 0)

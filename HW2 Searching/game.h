@@ -21,10 +21,13 @@ public:
 		White
 	};
 
+	Game(bool tests);
 	Game(PlayerColor playerColor = PlayerColor::Red, sf::Vector2u boardsize = { 512, 512 }, PlayerColor player2Color = PlayerColor::Black);
 	~Game();
 
 	void run();
+	void doTests();
+	bool test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<PieceType>& finalBoardTiles);
 
 	void nextTurn();
 	void displayMoves();
@@ -76,6 +79,9 @@ private:
 	float _pawnWeight = 1.0f;
 	float _kingWeight = 1.5f;
 	int _depthOfSearch = 0;
+
+	// Testing
+	int _testCount = 0;
 
 	int _miniMaxCalls = 0;
 	int _evaluationCalls = 0;
