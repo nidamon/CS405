@@ -9,11 +9,9 @@ This is the file that contains main and will run the program
 
 int main()
 {
-	Game tests(true);
-	tests.doTests();
-
-	//Game game(Game::PlayerColor::White, { 768, 768 }, Game::PlayerColor::White);
-	//game.run();
+	Game game(Game::PlayerColor::White, { 768, 768 }, Game::PlayerColor::White);
+	//game.doTests();
+	game.run();
 
 	//game.displayStats();
 

@@ -84,6 +84,10 @@ void Board::setup()
 			_tiles[i] = PieceType::Player2_Pawn;
 	}
 }
+void Board::setup(std::vector<PieceType>& newTiles)
+{
+	_tiles = newTiles;
+}
 
 // Piece diplay setup
 void Board::playerPieceDisplaySetup(bool player2IsBlack)

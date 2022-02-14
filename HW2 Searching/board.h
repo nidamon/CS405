@@ -38,6 +38,7 @@ private:
 	void pieceTypeToCout(PieceType pieceType);
 
 public:
+	void setup(std::vector<PieceType>& newTiles);
 	static sf::Vector2<float> indexToPosition(int tileIndex);
 	static int xyToIndex(int x, int y);
 	static sf::Vector2<int> indexToXY(int tileIndex);

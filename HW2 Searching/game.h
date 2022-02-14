@@ -21,13 +21,12 @@ public:
 		White
 	};
 
-	Game(bool tests);
 	Game(PlayerColor playerColor = PlayerColor::Red, sf::Vector2u boardsize = { 512, 512 }, PlayerColor player2Color = PlayerColor::Black);
 	~Game();
 
 	void run();
 	void doTests();
-	bool test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<PieceType>& finalBoardTiles);
+	int test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<std::vector<PieceType>>& finalBoards, int turn, int movesToBeMade, int depth);
 
 	void nextTurn();
 	void displayMoves();
@@ -40,9 +39,10 @@ private:
 	void drawSelf();
 	// Returns true if player2's color is black
 	bool setPlayer2Color(PlayerColor playerColor, PlayerColor team2Color);
+	void setUpBoard(std::vector<PieceType>& tiles, int turn);
 
 	void getMoves();
-	void conductMoves();
+	void conductMoves(DWORD sleepTime);
 
 	void setSelectedIndex();
 	void userInputHandle();
@@ -54,8 +54,10 @@ private:
 	// returns difference of piece values with respect to teamTurn
 	float boardEvaluate(const std::vector<PieceType> tiles, int teamTurn);
 	// Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-	float miniMax(Board& board, const int teamTurn, const int depth, const bool getMin);
+	float miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps);
+
 	// Returns the optimal move upon a DFS of x turns of possible moves
+	sf::Vector3<int> miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn);
 	sf::Vector3<int> miniMaxCall();
 	// Sets the search depth of miniMaxCall()
 	void setDepthOfSearch(int depthOfSearch);
@@ -81,6 +83,7 @@ private:
 	int _depthOfSearch = 0;
 
 	// Testing
+	bool _isTesting = false;
 	int _testCount = 0;
 
 	int _miniMaxCalls = 0;

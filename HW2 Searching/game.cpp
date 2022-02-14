@@ -11,10 +11,6 @@ std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
-Game::Game(bool tests) 
-{
-}
-
 Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
     : _board(setPlayer2Color(playerColor, player2Color)),
       _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
@@ -36,7 +32,7 @@ Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2C
         _player2Color = PlayerColor::White;
 
     setupWinSprite();    
-    setDepthOfSearch(2);
+    setDepthOfSearch(4);
 }
 
 Game::~Game()
@@ -71,70 +67,222 @@ void Game::run()
         winCheck();
 
         drawSelf();
-        conductMoves();
+        conductMoves(200);
     }
 }
 void Game::doTests()
 {
+    _isTesting = true;
     int testsPassed = 0;
+    int startDepth = 2;
+    int maxDepth = 4;
 
     PieceType _ = PieceType::NoPiece;
     PieceType r = PieceType::Player1_Pawn;
     PieceType b = PieceType::Player2_Pawn;
     PieceType R = PieceType::Player1_King;
     PieceType B = PieceType::Player2_King;
-    std::vector<PieceType> testTiles = {
-    	/**/ _, /**/ _, /**/ _, /**/ _,
-    	 R, /**/ _, /**/ _, /**/ _, /**/
-    	/**/ b, /**/ B, /**/ _, /**/ _,
-    	 _, /**/ _, /**/ R, /**/ _, /**/
-    	/**/ b, /**/ b, /**/ b, /**/ _,
-    	 _, /**/ _, /**/ _, /**/ _, /**/
-    	/**/ _, /**/ _, /**/ b, /**/ _,
-         _, /**/ _, /**/ _, /**/ _, /**/
-    };
 
-    std::vector<PieceType> expectedResultTiles = {
-    	/**/ _, /**/ _, /**/ _, /**/ _,
-    	 R, /**/ _, /**/ _, /**/ _, /**/
-    	/**/ b, /**/ B, /**/ _, /**/ _,
-    	 _, /**/ _, /**/ R, /**/ _, /**/
-    	/**/ b, /**/ b, /**/ b, /**/ _,
-    	 _, /**/ _, /**/ _, /**/ _, /**/
-    	/**/ _, /**/ _, /**/ b, /**/ _,
-         r, /**/ _, /**/ _, /**/ _, /**/
-    };
+    // Long Multi-Jump test
+    {
+        std::vector<PieceType> testTiles = {
+            _,    _,    _,    _,
+         R,    _,    _,    _,
+            b,    B,    _,    _,
+         _,    _,    R,    _,
+            b,    b,    b,    _,
+         _,    _,    _,    _,
+            _,    _,    b,    _,
+         _,    _,    _,    _,
+        };
 
-    //std::vector<PieceType> expectedResultTiles = {
-    //	/**/ _, /**/ _, /**/ _, /**/ _,
-    //	 R, /**/ _, /**/ _, /**/ _, /**/
-    //	/**/ _, /**/ _, /**/ _, /**/ _,
-    //	 _, /**/ _, /**/ _, /**/ _, /**/
-    //	/**/ _, /**/ _, /**/ _, /**/ _,
-    //	 _, /**/ _, /**/ _, /**/ _, /**/
-    //	/**/ _, /**/ _, /**/ _, /**/ _,
-    //     _, /**/ _, /**/ R, /**/ _, /**/
-    //};
+        std::vector<PieceType> expectedResultTiles = {
+            _,    _,    _,    _,
+         R,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    R,    _,
+        };
+
+        std::vector<std::vector<PieceType>> finalBoards = { expectedResultTiles };
+
+        for (int depth = startDepth; depth < maxDepth + 1; depth++)
+            testsPassed += test("Long Multi-Jump test", testTiles, finalBoards, 1, 6, depth);
+
+        std::cout << "\n\n";
+    }
+    // Move Piece out of way test
+    {
+        std::vector<PieceType> testTiles = {
+            _,    _,    r,    r,
+         r,    _,    r,    r,
+            _,    r,    _,    b,
+         r,    _,    b,    b,
+            _,    _,    b,    b,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<PieceType> expectedResultTiles = {
+             _,    _,    r,    r,
+         r,    _,    r,    r,
+            _,    _,    _,    b,
+         r,    r,    b,    b,
+            _,    _,    b,    b,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<std::vector<PieceType>> finalBoards = { expectedResultTiles };
+
+        for (int depth = startDepth; depth < maxDepth + 1; depth++)
+            testsPassed += test("Move Piece out of way test", testTiles, finalBoards, 1, 1, depth);
+
+        std::cout << "\n\n";
+    }
+    // Block Piece test
+    {
+        std::vector<PieceType> testTiles = {
+            _,    _,    B,    _,
+         _,    B,    R,    _,
+            _,    _,    _,    _,
+         _,    _,    R,    _,
+            _,    B,    _,    _,
+         _,    B,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<PieceType> expectedResultTiles = {
+            _,    _,    B,    _,
+         _,    B,    _,    _,
+            _,    _,    R,    _,
+         _,    _,    R,    _,
+            _,    B,    _,    _,
+         _,    B,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<std::vector<PieceType>> finalBoards = { expectedResultTiles};
+
+        for (int depth = startDepth; depth < maxDepth + 1; depth++)
+            testsPassed += test("Block Piece test", testTiles, finalBoards, 1, 1, depth);
+
+        std::cout << "\n\n";
+    }
+    // Don't Self Destruct test
+    {
+        std::vector<PieceType> testTiles = {
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    R,    _,    _,
+         _,    _,    _,    _,
+            _,    B,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<PieceType> expectedResultTiles = {
+            _,    _,    _,    _,
+         _,    R,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    B,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+        std::vector<PieceType> expectedResultTiles2 = {
+            _,    _,    _,    _,
+         _,    _,    R,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    B,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+
+        std::vector<std::vector<PieceType>> finalBoards = { expectedResultTiles, expectedResultTiles2 };
+
+        for (int depth = startDepth; depth < maxDepth + 1; depth++)
+            testsPassed += test("Block Piece test", testTiles, finalBoards, 1, 1, depth);
+
+        std::cout << "\n\n";
+    }
 
 
-    testsPassed += test("Long Jump test", testTiles, expectedResultTiles);
 
 
 
+
+
+
+        
+        /*
+        std::vector<PieceType> testTiles = {
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+        std::vector<PieceType> expectedResultTiles = {
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+            _,    _,    _,    _,
+         _,    _,    _,    _,
+        };
+        */
+
+                                    
+    //std::cout << "Depth of search: " << _depthOfSearch;
     if (testsPassed == _testCount)
         std::cout << "\nTests: All PASSED\n\n";
     else
-        std::cout << "\nTests: " << _testCount - testsPassed << " FAILED, " << testsPassed << " PASSED\n";
+        std::cout << "\nTests: " << _testCount - testsPassed << " FAILED, " << testsPassed << " PASSED\n\n";
 }
-bool Game::test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<PieceType>& finalBoardTiles)
+int Game::test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<std::vector<PieceType>>& finalBoards, int turn, int movesToBeMade, int depth)
 {
+    std::cout << '\n';
+    _depthOfSearch = depth;
+
+    if (_gameOver)
+        _gameOver = !_gameOver;
     ++_testCount;
-    if (initialBoardTiles != finalBoardTiles)
+    // Perform actions on initialBoardTiles that should get the finalBoardTiles
+    setUpBoard(initialBoardTiles, turn);
+    for (int movesMade = 0; movesMade < movesToBeMade; movesMade++)
     {
-        std::cout << testName + ": FAILED\n";
-        return false;
+        // The turn isn't supposed to end until after the last iteration
+        if (turn != _turn)
+            break;
+        getMoves();
+        conductMoves(0);
+    } 
+    // Test it
+    for (auto& finalBoard : finalBoards)
+    {
+        if (_board.getBoardTiles() == finalBoard)
+            return 1;
     }
-    return true;
+    // Failure upon not passing
+    std::cout << testName + ": FAILED with depth search of " << _depthOfSearch << '\n';
+    return 0;
 }
 
 void Game::nextTurn()
@@ -217,8 +365,11 @@ void Game::winCheck()
             }
         }        
         _gameOver = true;
-        _stats.updateRawGameDataSheet(_turn, _userTurn);
-        _stats.displayStats();
+        if (!_isTesting)
+        {
+            _stats.updateRawGameDataSheet(_turn, _userTurn);
+            _stats.displayStats();
+        }
     }
 }
 
@@ -239,6 +390,12 @@ bool Game::setPlayer2Color(PlayerColor playerColor, PlayerColor team2Color)
     else
         return (int(playerColor) + 1) % 2;
 }
+void Game::setUpBoard(std::vector<PieceType>& tiles, int turn)
+{
+    _turn = turn;
+    _board.setup(tiles);
+}
+
 void Game::getMoves()
 {
     if (!_gameOver)
@@ -254,7 +411,7 @@ void Game::getMoves()
             loadAdditionalJumps();
     }
 }
-void Game::conductMoves()
+void Game::conductMoves(DWORD sleepTime)
 {
     if (!_gameOver)
     {
@@ -262,11 +419,15 @@ void Game::conductMoves()
             userInputHandle();
         else
         {
-            Sleep(200);
+            if(_isTesting)
+                drawSelf();
+            if(sleepTime > 0)
+                Sleep(sleepTime);
             makeMiniMaxMove();
 
             drawSelf();
-            Sleep(200);
+            if (sleepTime > 0)
+                Sleep(sleepTime);
         }
     }
 }
@@ -370,128 +531,124 @@ float Game::boardEvaluate(const std::vector<PieceType> tiles, int teamTurn)
             break;
         }
     }
-    if (teamTurn == 2)
+    if (teamTurn % 2 == 0)
         evaluation = -evaluation;
     return evaluation;
 }
+
 // Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-float Game::miniMax(Board& board, const int teamTurn, const int depth, const bool getMin)
+float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps)
 {
+    auto getMoves = [&](std::vector<sf::Vector3<int>>& possibleMoves) {
+        if (additionalJumps.empty())
+            board.generateMoves(possibleMoves, teamTurn);
+        else
+            possibleMoves = additionalJumps;
+    };
+
     ++_miniMaxCalls;
-    float minMax = 10000.0f;
-    if (!getMin)
-        minMax = -minMax;
+    float minMax = 1000.0f; // Get min
+    if (teamTurn == maximizingTurn)
+        minMax = -1000.0f; // Get max 
+
+    // Base case for recursion
     if (depth > 0)
-    { 
-        float holder;
+    {
+        float valHolder;
         int jumpAdjustment = 0;
+
         std::vector<sf::Vector3<int>> possibleMoves;
-        board.generateMoves(possibleMoves, teamTurn);
+        std::vector<sf::Vector3<int>> newAdditionalJumps;
 
-        if (possibleMoves.size() > 0) 
+        // Test all available moves
+        getMoves(possibleMoves);
+        for (size_t i = 0; i < possibleMoves.size(); i++)
         {
-            if (possibleMoves[0].z != -1) // Check if jump
+            // Adjust for any jumps
+            if (possibleMoves[0].z != -1)
                 jumpAdjustment = 1;
-            for (size_t i = 0; i < possibleMoves.size(); i++)
-            {   
-                bool getMinTemp = !getMin;
-                int teamAdjustment = 1;
-                Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
 
-                // Look for additional jumps
-                if (jumpAdjustment == 1)
-                {
-                    std::vector<sf::Vector3<int>> additionalJumps;
-                    newBoard.getIndividualPieceMoves(additionalJumps, possibleMoves[i].y, teamTurn, true);
-                    if (additionalJumps.size() > 0)
-                    {
-                        getMinTemp = !getMinTemp;
-                        teamAdjustment = 0;
-                    }
-                }
+            int teamAdjustment = 0;
+            // Get a new board with new piece positions
+            Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
 
-                holder = miniMax(newBoard, (teamTurn % 2) + teamAdjustment, depth - 1 + jumpAdjustment, getMinTemp);
-
-                if (getMin)
-                {
-                    if (holder < minMax)
-                        minMax = holder;
-                }
-                else // GetMax
-                {
-                    if (holder > minMax)
-                        minMax = holder;
-                }
-            }
-            return minMax;
-        }
-        else // No moves available means game over
-        {
-            if (getMin)
+            // Look for additional jumps after current jump
+            if (jumpAdjustment == 1)
             {
-                return 1000.0f; // Win
+                newAdditionalJumps.clear();
+                newBoard.getIndividualPieceMoves(newAdditionalJumps, possibleMoves[i].y, teamTurn, true);
+                if (newAdditionalJumps.size() > 0)
+                    teamAdjustment = -1; // If can make another jump
+                else
+                    jumpAdjustment = 0;
             }
-            else // GetMax
-            {
-                return -1000.0f; // Loss
-            }
+
+            // Recursion call
+            valHolder = miniMax(newBoard, ((teamTurn + teamAdjustment + 1) % 2), maximizingTurn, depth - 1 + jumpAdjustment, newAdditionalJumps);
+
+            // Get new min or max
+            if (teamTurn == maximizingTurn) // Get Max
+                minMax = std::max(valHolder, minMax);
+            else // Get Min
+                minMax = std::min(valHolder, minMax);
         }
+        return minMax;
     }
-    else
-        return boardEvaluate(board.getBoardTiles(), teamTurn);
+    return boardEvaluate(board.getBoardTiles(), teamTurn);
 }
+
 // Returns the optimal move upon a DFS of x turns of possible moves
-sf::Vector3<int> Game::miniMaxCall()
+sf::Vector3<int> Game::miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn)
 {
     std::vector<sf::Vector3<int>> optimalMove;
     float max = -10000.0f;
     float holder;
     int jumpAdjustment = 0;
 
-    if (_possibleMoves[0].z != -1) // Check if jump
+    if (possibleMoves[0].z != -1) // Check if jump
         jumpAdjustment = 1;
 
     // First depth call here
-    if (_depthOfSearch > 0 && (int)_possibleMoves.size() > 1)
+    if (depthOfSearch > 0 && (int)possibleMoves.size() > 1)
     {
-        for (size_t i = 0; i < _possibleMoves.size(); i++)
+        for (size_t i = 0; i < possibleMoves.size(); i++)
         {
-            bool getMinTemp = true;
-            int teamAdjustment = 1;
-            Board newBoard(Board::portrayMove(_board.getBoardTiles(), _possibleMoves[i]));
+            int teamAdjustment = 0;
+            Board newBoard(Board::portrayMove(_board.getBoardTiles(), possibleMoves[i]));
 
+            std::vector<sf::Vector3<int>> additionalJumps;
             // Look for additional jumps
             if (jumpAdjustment == 1)
             {
-                std::vector<sf::Vector3<int>> additionalJumps;
-                newBoard.getIndividualPieceMoves(additionalJumps, _possibleMoves[i].y, _turn, true);
+                newBoard.getIndividualPieceMoves(additionalJumps, possibleMoves[i].y, turn, true);
                 if (additionalJumps.size() > 0)
-                {
-                    getMinTemp = !getMinTemp;
-                    teamAdjustment = 0;
-                }
+                    teamAdjustment = -1;
             }
 
-            holder = miniMax(newBoard, (_turn % 2) + teamAdjustment, _depthOfSearch - 1 + jumpAdjustment, getMinTemp);
+            holder = miniMax(newBoard, ((turn + teamAdjustment + 1) % 2), turn % 2, depthOfSearch - 1 + jumpAdjustment, additionalJumps);
 
-            std::cout << holder << "  (Pos, Destination, Jumped) { " << _possibleMoves[i].x << ", " << _possibleMoves[i].y << ", " << _possibleMoves[i].z << " }" << std::endl;
+            std::cout << holder << "  (Pos, Destination, Jumped) { " << possibleMoves[i].x << ", " << possibleMoves[i].y << ", " << possibleMoves[i].z << " }" << std::endl;
 
 
             if (holder > max || optimalMove.size() == 0)
             {
                 optimalMove.clear();
 
-                optimalMove.push_back(_possibleMoves[i]);
+                optimalMove.push_back(possibleMoves[i]);
                 max = holder;
             }
-            if(holder == max)
-                optimalMove.push_back(_possibleMoves[i]);
+            if (holder == max)
+                optimalMove.push_back(possibleMoves[i]);
         }
     }
     else
-        return _possibleMoves[(int(randPercent(gen) * float(int(_possibleMoves.size()) + 1))) % _possibleMoves.size()];
+        return possibleMoves[(int(randPercent(gen) * float(int(possibleMoves.size()) + 1))) % possibleMoves.size()];
     // Return a random optimal move (for when several options seem eqaully optimal)
     return optimalMove[(int(randPercent(gen) * float(int(optimalMove.size()) + 1))) % optimalMove.size()];
+}
+sf::Vector3<int> Game::miniMaxCall()
+{
+    return miniMaxCall(_possibleMoves, _depthOfSearch, _turn);
 }
 // Sets the search depth of miniMaxCall()
 void Game::setDepthOfSearch(int depthOfSearch)
@@ -510,8 +667,11 @@ void Game::makeMiniMaxMove()
 
         _latestMove = miniMaxCall();
 
-        std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
-        std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+        if (_miniMaxCalls > 0)
+        {
+            std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
+            std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+        }
 
         finalizeMove();
     }
