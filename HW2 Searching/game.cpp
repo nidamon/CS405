@@ -285,12 +285,16 @@ int Game::test(std::string testName, std::vector<PieceType>& initialBoardTiles, 
     return 0;
 }
 
+void Game::enableDebugPrintout(bool doDebugPrintout)
+{
+    _doDebugPrintout = doDebugPrintout;
+}
+
 void Game::nextTurn()
 {
 	if (++_turn > 2)
 		_turn = 1;
 }
-
 void Game::displayMoves()
 {
     for (size_t i = 0; i < _possibleMoves.size(); i++)
@@ -423,7 +427,7 @@ void Game::conductMoves(DWORD sleepTime)
                 drawSelf();
             if(sleepTime > 0)
                 Sleep(sleepTime);
-            makeMiniMaxMove();
+            makeAlphaBetaMove(_doDebugPrintout);
 
             drawSelf();
             if (sleepTime > 0)
@@ -596,10 +600,81 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
     }
     return boardEvaluate(board.getBoardTiles(), teamTurn);
 }
+// Recursively makes boards and evaluates them with alpha beta cutoff. Returns the minimum and maximum boardEvaluations made
+float Game::alphaBeta(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float& a, float& b)
+{
+    auto getMoves = [&](std::vector<sf::Vector3<int>>& possibleMoves) {
+        if (additionalJumps.empty())
+            board.generateMoves(possibleMoves, teamTurn);
+        else
+            possibleMoves = additionalJumps;
+    };
+
+    ++_alphaBetaCalls;
+    float value = 1000.0f; // Get min
+    if (teamTurn == maximizingTurn)
+        value = -1000.0f; // Get max 
+
+    // Base case for recursion
+    if (depth > 0)
+    {
+        float valHolder;
+        int jumpAdjustment = 0;
+
+        std::vector<sf::Vector3<int>> possibleMoves;
+        std::vector<sf::Vector3<int>> newAdditionalJumps;
+
+        // Test all available moves
+        getMoves(possibleMoves);
+        for (size_t i = 0; i < possibleMoves.size(); i++)
+        {
+            // Adjust for any jumps
+            if (possibleMoves[0].z != -1)
+                jumpAdjustment = 1;
+
+            int teamAdjustment = 0;
+            // Get a new board with new piece positions
+            Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
+
+            // Look for additional jumps after current jump
+            if (jumpAdjustment == 1)
+            {
+                newAdditionalJumps.clear();
+                newBoard.getIndividualPieceMoves(newAdditionalJumps, possibleMoves[i].y, teamTurn, true);
+                if (newAdditionalJumps.size() > 0)
+                    teamAdjustment = -1; // If can make another jump
+                else
+                    jumpAdjustment = 0;
+            }
+
+            // Recursion call
+            valHolder = alphaBeta(newBoard, ((teamTurn + teamAdjustment + 1) % 2), maximizingTurn, depth - 1 + jumpAdjustment, newAdditionalJumps, a, b);
+
+            // Get new min or max
+            if (teamTurn == maximizingTurn) // Get Max
+            {
+                value = std::max(valHolder, value);
+                if (value >= b)
+                    break; // Beta cutoff
+                a = std::max(a, value);
+            }
+            else // Get Min
+            {
+                value = std::min(valHolder, value);
+                if (value <= a)
+                    break; // Alpha cutoff
+                b = std::min(b, value);
+            }
+        }
+        return value;
+    }
+    return boardEvaluate(board.getBoardTiles(), teamTurn);
+}
 
 // Returns the optimal move upon a DFS of x turns of possible moves
-sf::Vector3<int> Game::miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn)
+sf::Vector3<int> Game::miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
 {
+    std::cout << "Start miniMax\n";
     std::vector<sf::Vector3<int>> optimalMove;
     float max = -10000.0f;
     float holder;
@@ -627,7 +702,8 @@ sf::Vector3<int> Game::miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves,
 
             holder = miniMax(newBoard, ((turn + teamAdjustment + 1) % 2), turn % 2, depthOfSearch - 1 + jumpAdjustment, additionalJumps);
 
-            std::cout << holder << "  (Pos, Destination, Jumped) { " << possibleMoves[i].x << ", " << possibleMoves[i].y << ", " << possibleMoves[i].z << " }" << std::endl;
+            if(doPrintout)
+                std::cout << holder << "  (Pos, Destination, Jumped) { " << possibleMoves[i].x << ", " << possibleMoves[i].y << ", " << possibleMoves[i].z << " }" << std::endl;
 
 
             if (holder > max || optimalMove.size() == 0)
@@ -646,11 +722,105 @@ sf::Vector3<int> Game::miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves,
     // Return a random optimal move (for when several options seem eqaully optimal)
     return optimalMove[(int(randPercent(gen) * float(int(optimalMove.size()) + 1))) % optimalMove.size()];
 }
-sf::Vector3<int> Game::miniMaxCall()
+sf::Vector3<int> Game::miniMaxCall(bool doPrintout)
 {
-    return miniMaxCall(_possibleMoves, _depthOfSearch, _turn);
+    return miniMaxCall(_possibleMoves, _depthOfSearch, _turn, doPrintout);
 }
-// Sets the search depth of miniMaxCall()
+// Returns the optimal move upon an alpha beta DFS of x turns of possible moves 2x to 5x and sometimes 10x faster although results are slightly different at times
+sf::Vector3<int> Game::alphaBetaCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
+{
+    std::cout << "Start alphaBeta\n";
+    std::vector<sf::Vector3<int>> optimalMove;
+    float value = -10000.0f;
+    float holder;
+    int jumpAdjustment = 0;
+
+    float alpha = -10000.0f;
+    float beta = 10000.0f;
+
+    if (possibleMoves[0].z != -1) // Check if jump
+        jumpAdjustment = 1;
+
+    // First depth call here
+    if (depthOfSearch > 0 && (int)possibleMoves.size() > 1)
+    {
+        for (size_t i = 0; i < possibleMoves.size(); i++)
+        {
+            int teamAdjustment = 0;
+            Board newBoard(Board::portrayMove(_board.getBoardTiles(), possibleMoves[i]));
+
+            std::vector<sf::Vector3<int>> additionalJumps;
+            // Look for additional jumps
+            if (jumpAdjustment == 1)
+            {
+                newBoard.getIndividualPieceMoves(additionalJumps, possibleMoves[i].y, turn, true);
+                if (additionalJumps.size() > 0)
+                    teamAdjustment = -1;
+            }
+
+            holder = alphaBeta(newBoard, ((turn + teamAdjustment + 1) % 2), turn % 2, depthOfSearch - 1 + jumpAdjustment, additionalJumps, alpha, beta);
+
+            if(doPrintout)
+                std::cout << holder << "  (Pos, Destination, Jumped) { " << possibleMoves[i].x << ", " << possibleMoves[i].y << ", " << possibleMoves[i].z << " }" << std::endl;
+
+
+            if (holder > value || optimalMove.size() == 0)
+            {
+                optimalMove.clear();
+
+                optimalMove.push_back(possibleMoves[i]);
+                value = holder;
+            }
+            if (holder == value)
+                optimalMove.push_back(possibleMoves[i]);
+        }
+    }
+    else
+        return possibleMoves[(int(randPercent(gen) * float(int(possibleMoves.size()) + 1))) % possibleMoves.size()];
+    // Return a random optimal move (for when several options seem eqaully optimal)
+    return optimalMove[(int(randPercent(gen) * float(int(optimalMove.size()) + 1))) % optimalMove.size()];
+}
+sf::Vector3<int> Game::alphaBetaCall(bool doPrintout)
+{
+    return alphaBetaCall(_possibleMoves, _depthOfSearch, _turn, doPrintout);
+}
+
+// Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
+void Game::alphaBetaMiniMaxCompare(bool doPrintout)
+{
+    if (_possibleMoves.size() > 0)
+    {
+        _miniMaxCalls = 0;
+        _evaluationCalls = 0;
+
+        sf::Vector3<int> latestMove1 = miniMaxCall(doPrintout);
+
+        if (_miniMaxCalls > 0)
+        {
+            std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
+            std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+        }
+
+        _alphaBetaCalls = 0;
+        _evaluationCalls = 0;
+
+        sf::Vector3<int> latestMove2 = alphaBetaCall(doPrintout);
+
+        if (_alphaBetaCalls > 0)
+        {
+            std::cout << "AlphaBeta calls: " << _alphaBetaCalls << std::endl;
+            std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+        }
+
+        std::cout << "Moves are ";
+        if (latestMove1 == latestMove2)
+            std::cout << "the same.\n";
+        else
+            std::cout << "different!!!\n";
+        std::cout << "AlphaBetaCall reduction: " << float(_miniMaxCalls - _alphaBetaCalls) / float(_miniMaxCalls) << "% of MiniMaxCall count\n";
+    }
+}
+// Sets the search depth of miniMaxCall() and alphaBetaCall()
 void Game::setDepthOfSearch(int depthOfSearch)
 {
     _depthOfSearch = depthOfSearch;
@@ -658,18 +828,37 @@ void Game::setDepthOfSearch(int depthOfSearch)
 }
 
 // Uses miniMax function to pick a move
-void Game::makeMiniMaxMove()
+void Game::makeMiniMaxMove(bool doPrintout)
 {
     if (_possibleMoves.size() > 0)
     {
         _miniMaxCalls = 0;
         _evaluationCalls = 0;
 
-        _latestMove = miniMaxCall();
+        _latestMove = miniMaxCall(doPrintout);
 
         if (_miniMaxCalls > 0)
         {
             std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
+            std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+        }
+
+        finalizeMove();
+    }
+}
+// Uses alphaBeta function to pick a move
+void Game::makeAlphaBetaMove(bool doPrintout)
+{
+    if (_possibleMoves.size() > 0)
+    {
+        _alphaBetaCalls = 0;
+        _evaluationCalls = 0;
+
+        _latestMove = alphaBetaCall(doPrintout);
+
+        if (_alphaBetaCalls > 0)
+        {
+            std::cout << "AlphaBeta calls: " << _alphaBetaCalls << std::endl;
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
         }
 

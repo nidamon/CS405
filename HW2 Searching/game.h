@@ -28,6 +28,8 @@ public:
 	void doTests();
 	int test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<std::vector<PieceType>>& finalBoards, int turn, int movesToBeMade, int depth);
 
+	void enableDebugPrintout(bool doDebugPrintout);
+
 	void nextTurn();
 	void displayMoves();
 private:
@@ -55,15 +57,25 @@ private:
 	float boardEvaluate(const std::vector<PieceType> tiles, int teamTurn);
 	// Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
 	float miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps);
+	// Recursively makes boards and evaluates them with alpha beta cutoff. Returns the minimum and maximum boardEvaluations made
+	float alphaBeta(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float& a, float& b);
 
 	// Returns the optimal move upon a DFS of x turns of possible moves
-	sf::Vector3<int> miniMaxCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn);
-	sf::Vector3<int> miniMaxCall();
-	// Sets the search depth of miniMaxCall()
+	sf::Vector3<int> miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
+	sf::Vector3<int> miniMaxCall(bool doPrintout);
+	// Returns the optimal move upon an alpha beta DFS of x turns of possible moves 2x to 5x and sometimes 10x faster although results are slightly different at times
+	sf::Vector3<int> alphaBetaCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
+	sf::Vector3<int> alphaBetaCall(bool doPrintout);
+
+	// Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
+	void alphaBetaMiniMaxCompare(bool doPrintout);
+	// Sets the search depth of miniMaxCall() and alphaBetaCall()
 	void setDepthOfSearch(int depthOfSearch);
 
 	// Uses miniMax function to pick a move
-	void makeMiniMaxMove();
+	void makeMiniMaxMove(bool doPrintout);
+	// Uses alphaBeta function to pick a move
+	void makeAlphaBetaMove(bool doPrintout);
 	void finalizeMove();
 
 	void loadAdditionalJumps();
@@ -85,8 +97,10 @@ private:
 	// Testing
 	bool _isTesting = false;
 	int _testCount = 0;
+	bool _doDebugPrintout = false;
 
 	int _miniMaxCalls = 0;
+	int _alphaBetaCalls = 0;
 	int _evaluationCalls = 0;
 
 	int _userTurn = 1;

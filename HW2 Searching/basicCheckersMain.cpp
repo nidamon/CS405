@@ -10,10 +10,9 @@ This is the file that contains main and will run the program
 int main()
 {
 	Game game(Game::PlayerColor::White, { 768, 768 }, Game::PlayerColor::White);
+	game.enableDebugPrintout(false);
 	//game.doTests();
 	game.run();
-
-	//game.displayStats();
 
 	return 0;
 }
