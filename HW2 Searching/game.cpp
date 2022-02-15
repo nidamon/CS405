@@ -33,6 +33,7 @@ Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2C
 
     setupWinSprite();    
     setDepthOfSearch(4);
+    setupRandomTournamentBoard();
 }
 
 Game::~Game()
@@ -558,6 +559,7 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
     // Base case for recursion
     if (depth > 0)
     {
+        ++_branchSplitCount;
         float valHolder;
         int jumpAdjustment = 0;
 
@@ -566,6 +568,7 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
 
         // Test all available moves
         getMoves(possibleMoves);
+        _branchCount += (int)possibleMoves.size();
         for (size_t i = 0; i < possibleMoves.size(); i++)
         {
             // Adjust for any jumps
@@ -618,6 +621,7 @@ float Game::alphaBeta(Board& board, const int teamTurn, const int maximizingTurn
     // Base case for recursion
     if (depth > 0)
     {
+        ++_branchSplitCount;
         float valHolder;
         int jumpAdjustment = 0;
 
@@ -626,6 +630,7 @@ float Game::alphaBeta(Board& board, const int teamTurn, const int maximizingTurn
 
         // Test all available moves
         getMoves(possibleMoves);
+        _branchCount += (int)possibleMoves.size();
         for (size_t i = 0; i < possibleMoves.size(); i++)
         {
             // Adjust for any jumps
@@ -674,7 +679,6 @@ float Game::alphaBeta(Board& board, const int teamTurn, const int maximizingTurn
 // Returns the optimal move upon a DFS of x turns of possible moves
 sf::Vector3<int> Game::miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
 {
-    std::cout << "Start miniMax\n";
     std::vector<sf::Vector3<int>> optimalMove;
     float max = -10000.0f;
     float holder;
@@ -683,9 +687,12 @@ sf::Vector3<int> Game::miniMaxCall(const std::vector<sf::Vector3<int>>& possible
     if (possibleMoves[0].z != -1) // Check if jump
         jumpAdjustment = 1;
 
+    _branchCount = 0;
     // First depth call here
     if (depthOfSearch > 0 && (int)possibleMoves.size() > 1)
-    {
+    {  
+        _branchSplitCount = 1;
+        _branchCount += (int)possibleMoves.size();
         for (size_t i = 0; i < possibleMoves.size(); i++)
         {
             int teamAdjustment = 0;
@@ -729,7 +736,6 @@ sf::Vector3<int> Game::miniMaxCall(bool doPrintout)
 // Returns the optimal move upon an alpha beta DFS of x turns of possible moves 2x to 5x and sometimes 10x faster although results are slightly different at times
 sf::Vector3<int> Game::alphaBetaCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
 {
-    std::cout << "Start alphaBeta\n";
     std::vector<sf::Vector3<int>> optimalMove;
     float value = -10000.0f;
     float holder;
@@ -741,9 +747,12 @@ sf::Vector3<int> Game::alphaBetaCall(const std::vector<sf::Vector3<int>>& possib
     if (possibleMoves[0].z != -1) // Check if jump
         jumpAdjustment = 1;
 
+    _branchCount = 0;
     // First depth call here
     if (depthOfSearch > 0 && (int)possibleMoves.size() > 1)
     {
+        _branchSplitCount = 1;
+        _branchCount += (int)possibleMoves.size();
         for (size_t i = 0; i < possibleMoves.size(); i++)
         {
             int teamAdjustment = 0;
@@ -841,6 +850,8 @@ void Game::makeMiniMaxMove(bool doPrintout)
         {
             std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+            std::cout << "Average branch factor: " << (float)_branchCount / (float)_branchSplitCount << std::endl;
+
         }
 
         finalizeMove();
@@ -860,6 +871,7 @@ void Game::makeAlphaBetaMove(bool doPrintout)
         {
             std::cout << "AlphaBeta calls: " << _alphaBetaCalls << std::endl;
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
+            std::cout << "Average branch factor: " << (float)_branchCount / (float)_branchSplitCount << std::endl;
         }
 
         finalizeMove();
@@ -901,4 +913,79 @@ bool Game::areAdditionalJumps()
 int Game::getBoardTile(size_t index)
 {
     return int(_board.getBoardTiles()[index]);
+}
+
+// Sets up on of the 216 starting tournament boards
+void Game::setupRandomTournamentBoard()
+{    
+    _board.setup(_startingBoards[(int(randPercent(gen) * float(int(_startingBoards.size()) + 1))) % _startingBoards.size()]);
+    _turn = 2; // Player 2 goes next
+}
+// Generates the 216 starting tournament boards
+void Game::tournamentBoardGen()
+{    
+    std::vector<std::vector<PieceType>> startingBoards;
+
+
+    int teamTurn = 1;
+    std::vector<sf::Vector3<int>> possibleMoves1;
+    _board.generateMoves(possibleMoves1, teamTurn);
+
+
+    for (size_t i = 0; i < possibleMoves1.size(); i++) // First set of moves
+    {
+        Board board2(Board::portrayMove(_board.getBoardTiles(), possibleMoves1[i]));
+        teamTurn = 2;
+
+        std::vector<sf::Vector3<int>> possibleMoves2;
+        board2.generateMoves(possibleMoves2, teamTurn);
+
+        for (size_t j = 0; j < possibleMoves2.size(); j++) // Second set of moves
+        {
+            Board board3(Board::portrayMove(board2.getBoardTiles(), possibleMoves2[j]));
+            teamTurn = 1;
+
+            std::vector<sf::Vector3<int>> possibleMoves3;
+            board3.generateMoves(possibleMoves3, teamTurn);
+            for (size_t k = 0; k < possibleMoves3.size(); k++) // Third set of moves
+            {
+                startingBoards.push_back(Board::portrayMove(board3.getBoardTiles(), possibleMoves3[k]));
+            }
+        }
+    }
+
+    _startingBoards.clear();
+    std::copy_if(startingBoards.begin(), startingBoards.end(),
+        std::back_inserter(_startingBoards),
+        [&](const std::vector<PieceType>& newboard)
+        {
+            for (auto& board : _startingBoards)
+            {
+                if (newboard == board)
+                    return false;
+            }
+            return true;
+        }    
+    );
+
+    /*std::sort(_startingBoards.begin(), _startingBoards.end(), [](const std::vector<PieceType>& a, const std::vector<PieceType>& b) {return a < b; });
+    std::unique(_startingBoards.begin(), _startingBoards.end());
+    _startingBoards.erase(
+        remove_if(_startingBoards.begin(), _startingBoards.end(),
+            [](const std::vector<PieceType>& a) {return a.size() == 0; }), _startingBoards.end());*/
+    
+
+    std::cout << _startingBoards.size() << "\n";
+    for (size_t i = 0; i < _startingBoards.size(); i++)
+    {
+        std::cout << "        { ";
+        for (size_t j = 0; j < _startingBoards[i].size(); j++)
+        {
+            if (j != 0)
+                std::cout << ", ";
+            std::cout << "PieceType::";
+            Board::pieceTypeToCout(_startingBoards[i][j]);
+        }
+        std::cout << " },\n";
+    }
 }

@@ -35,9 +35,8 @@ private:
 
 	void drawPiece(sf::RenderWindow& gfx, sf::Vector2<float> position, int tilesIndex);
 
-	void pieceTypeToCout(PieceType pieceType);
-
 public:
+	static void pieceTypeToCout(PieceType pieceType);
 	void setup(std::vector<PieceType>& newTiles);
 	static sf::Vector2<float> indexToPosition(int tileIndex);
 	static int xyToIndex(int x, int y);
