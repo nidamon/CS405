@@ -48,7 +48,7 @@ public:
 	void setPieceScale(float newScale);
 
 	std::vector<PieceType>& getBoardTiles();
-	const int getBoardLength();
+	static const int getBoardLength();
 	const float getTileWidth();
 	const sf::Vector2<float> getPieceOffset();
 	const float getHalfPieceLength();

@@ -148,12 +148,14 @@
   <ItemGroup>
     <ClInclude Include="board.h" />
     <ClInclude Include="game.h" />
+    <ClInclude Include="menu.h" />
     <ClInclude Include="stats.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="basicCheckersMain.cpp" />
     <ClCompile Include="board.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="menu.cpp" />
     <ClCompile Include="stats.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

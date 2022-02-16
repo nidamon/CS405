@@ -11,9 +11,8 @@ std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
-Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
-    : _board(setPlayer2Color(playerColor, player2Color)),
-      _gfx(sf::VideoMode(_board.getBoardLength(), _board.getBoardLength()), "Basic Checkers!")
+Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
+    : _board(setPlayer2Color(playerColor, player2Color)), _gfx(gfx)
 {
     _gfx.setSize(boardsize);
 
@@ -33,13 +32,34 @@ Game::Game(PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2C
 
     setupWinSprite();    
     setDepthOfSearch(4);
+    _difficulty = 1;
     setupRandomTournamentBoard();
 }
+Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth)
+    : _board(setPlayer2Color(playerColor, player2Color)), _gfx(gfx), _difficulty(difficulty)
+{
+    // Player 1 or Red player
+    if (playerColor == PlayerColor::CPU_playerGame)
+        _userTurn = 0; // Player has no turn
+    else if (playerColor == PlayerColor::Red)
+        _userTurn = 1;
+    else
+        _userTurn = 2;
 
+    // Player 1 or Red player
+    if (playerColor == PlayerColor::Black)
+        _player2Color = PlayerColor::Black;
+    else
+        _player2Color = PlayerColor::White;
+
+    setupWinSprite();
+    if(difficulty == 1) // MuscleBrain
+        setDepthOfSearch(difficultyDepth);
+    if(tournamentMode)
+        setupRandomTournamentBoard();
+}
 Game::~Game()
 {
-    if(_gfx.isOpen())
-        _gfx.close();
 }
 
 void Game::run()
@@ -71,6 +91,29 @@ void Game::run()
         conductMoves(200);
     }
 }
+// Returns true if gameover
+bool Game::runStep(bool mouseButtonPressed)
+{
+    if (mouseButtonPressed)
+    {
+        if (_gameOver) // If mouse click and the game is over
+            return true;
+        if (_userTurn == _turn)
+            setSelectedIndex();
+    }
+
+    // Get possible piece moves
+    getMoves();
+
+    // Game over
+    winCheck();
+
+    drawSelf();
+    conductMoves(200);
+
+    return false;
+}
+
 void Game::doTests()
 {
     _isTesting = true;
@@ -428,7 +471,20 @@ void Game::conductMoves(DWORD sleepTime)
                 drawSelf();
             if(sleepTime > 0)
                 Sleep(sleepTime);
-            makeAlphaBetaMove(_doDebugPrintout);
+            switch (_difficulty)
+            {
+            case 0: // No Brainer
+                makeRandomMove();
+                break;
+            case 1: // Muscle Head
+                makeAlphaBetaMove(_doDebugPrintout);
+                break;
+            default:
+                std::cout << "Making random moves as the difficulty selected is unavailable.\n";
+                makeRandomMove(); // If nothing else, make it random!
+                break;
+            }
+                
 
             drawSelf();
             if (sleepTime > 0)
@@ -836,6 +892,17 @@ void Game::setDepthOfSearch(int depthOfSearch)
     _stats.setDepthOfSearch(depthOfSearch);
 }
 
+// Randomly chooses an available move 
+void Game::makeRandomMove()
+{
+    // Random
+    if (_possibleMoves.size() > 0)
+    {
+        _latestMove = _possibleMoves[(int(randPercent(gen) * float(int(_possibleMoves.size()) + 1))) % _possibleMoves.size()];
+
+        finalizeMove();
+    }
+}
 // Uses miniMax function to pick a move
 void Game::makeMiniMaxMove(bool doPrintout)
 {
@@ -989,3 +1056,26 @@ void Game::tournamentBoardGen()
         std::cout << " },\n";
     }
 }
+
+
+/*
+Menu To do list if I get around to it
+
+Menu - Main
+    Play - Start game
+    Replays (MAYBE)
+    Options
+    Quit - close program
+
+
+
+Options - Menu
+    Your color (Red/Black/White  "piece")
+    Enemy color (Black/White or Red if Your color is Black/White  "piece")
+    tournament start
+        On/Off
+    difficulty
+        NoBrainer
+        MuscleHead -> depth
+    Back
+*/

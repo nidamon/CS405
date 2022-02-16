@@ -21,10 +21,13 @@ public:
 		White
 	};
 
-	Game(PlayerColor playerColor = PlayerColor::Red, sf::Vector2u boardsize = { 512, 512 }, PlayerColor player2Color = PlayerColor::Black);
+    Game(sf::RenderWindow& gfx, PlayerColor playerColor = PlayerColor::Red, sf::Vector2u boardsize = { 512, 512 }, PlayerColor player2Color = PlayerColor::Black);
+    Game(sf::RenderWindow& gfx, PlayerColor playerColor, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth = 1);
 	~Game();
 
 	void run();
+    // Returns true if gameover
+    bool runStep(bool mouseButtonPressed);
 	void doTests();
 	int test(std::string testName, std::vector<PieceType>& initialBoardTiles, std::vector<std::vector<PieceType>>& finalBoards, int turn, int movesToBeMade, int depth);
 
@@ -72,6 +75,8 @@ private:
 	// Sets the search depth of miniMaxCall() and alphaBetaCall()
 	void setDepthOfSearch(int depthOfSearch);
 
+    // Randomly chooses a move available
+    void makeRandomMove();
 	// Uses miniMax function to pick a move
 	void makeMiniMaxMove(bool doPrintout);
 	// Uses alphaBeta function to pick a move
@@ -88,6 +93,7 @@ private:
     // Generates the 216 starting tournament boards
 	void tournamentBoardGen();
 
+    int _difficulty;
 	int _turn = 1;
 	bool _gameOver = false;
 	sf::Vector3<int> _latestMove;
@@ -337,7 +343,7 @@ private:
 
 	PlayerColor _player2Color = PlayerColor::Black;
 	Board _board;
-	sf::RenderWindow _gfx;
+	sf::RenderWindow& _gfx; // Remove for menus
 
 	sf::Texture _winTexture;
 	sf::Sprite _winSprite;
