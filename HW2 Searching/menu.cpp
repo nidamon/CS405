@@ -90,10 +90,10 @@ void Menu::runGame()
 		_game = std::move(std::make_unique<Game>(_gfx, getPlayer1Color(), getPlayer2Color(), _tournamentModeOn, _difficulty, _muscleHeadDepth));
 		_game->enableDebugPrintout(false);
 	}
-	if (_game->runStep(_mouseButtonPressed))
+	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
 	{
 		_currentState = State::Main;
-		_game = nullptr;
+		_game = nullptr;	
 	}
 }
 
@@ -110,6 +110,7 @@ void Menu::setupMainMenu()
 }
 void Menu::displayMainMenu()
 {
+	_gfx.clear();
 	drawMenuBackground();
 	_gfx.draw(_checkersTitle);
 	drawButtons(_mainMenuButtons);
@@ -199,6 +200,7 @@ void Menu::setupOptionsMenu()
 }
 void Menu::displayOptionsMenu()
 {
+	_gfx.clear();
 	drawMenuBackground();
 
 	_gfx.draw(_optionsSpriteTitle);
