@@ -88,7 +88,7 @@ void Menu::runGame()
 	if (_game == nullptr) // Create a new game
 	{
 		_game = std::move(std::make_unique<Game>(_gfx, getPlayer1Color(), getPlayer2Color(), _tournamentModeOn, _difficulty, _muscleHeadDepth));
-		_game->enableDebugPrintout(false);
+		_game->enableDebugPrintout(true);
 	}
 	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
 	{
