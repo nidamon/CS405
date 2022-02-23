@@ -238,6 +238,9 @@ sf::Texture Game::_winTexture;
 sf::Sprite Game::_winSprite;
 
 
+// MCTS_node - Monte Carlo Tree Search Node
+int Game::MCTS_Node::_MCTS_nodeCount = 0;
+
 std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
@@ -704,13 +707,18 @@ void Game::conductMoves(DWORD sleepTime)
                 Sleep(sleepTime);
             switch (_difficulty)
             {
-            case 0: // No Brainer
+            case 0: // pure Randomness
                 makeRandomMove();
                 break;
-            case 1: // Muscle Head
-                makeAlphaBetaMove(_doDebugPrintout);
-                //makeMiniMaxMove(_doDebugPrintout);
+            case 1: // Alpha Beta
+                makeMiniMaxMove(_doDebugPrintout);
                 break;
+            case 2: // Alpha Beta
+                makeAlphaBetaMove(_doDebugPrintout);
+                break; 
+            case 3: // Monte Carlo Tree Search
+                makeMCTS_Move();
+                break; 
             default:
                 std::cout << "Making random moves as the difficulty selected is unavailable.\n";
                 makeRandomMove(); // If nothing else, make it random!
@@ -722,6 +730,7 @@ void Game::conductMoves(DWORD sleepTime)
             if (sleepTime > 0)
                 Sleep(sleepTime);
         }
+        ++_turnCount;
     }
 }
 
@@ -972,6 +981,149 @@ float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, co
     return boardEvaluate(board.getBoardTiles(), maximizingTurn);
 }
 
+float Game::getUCB(Game::MCTS_Node* node)
+{
+    if (node->getVisitCount() == 0)
+        return INFINITY;
+    else
+    {
+        auto avg = node->getScore() / float(node->getVisitCount());
+        float c = 2.0f;
+        auto N = float(node->getParentNode()->getVisitCount());
+        auto n = float(node->getVisitCount());
+        return avg + c * sqrtf(log(N) / n);
+    }
+}
+
+Game::MCTS_Node* Game::traverse(Game::MCTS_Node* node)
+{
+    while (node->isFullyExpanded())
+        node = bestUCB(node);
+
+    return node->getUnvisited();
+}
+Game::MCTS_Node* Game::bestUCB(Game::MCTS_Node* node)
+{
+    if (node->isNotTerminal())
+    {
+        MCTS_Node* bestChild = node->getChildrenNodes()[0].get();
+
+        for (auto& child : node->getChildrenNodes())
+            if (getUCB(child.get()) > getUCB(bestChild))
+                bestChild = child.get();
+
+        return bestChild;
+    }
+    return node;
+}
+// Make moves based on rollout policy till result
+float Game::mCTS_Rollout(Game::MCTS_Node* node)
+{
+    if (node->isNotTerminal())
+    {
+        auto rolloutNode = rolloutPolicy(node);
+
+        while (rolloutNode->isNotTerminal())
+        {
+            /*Sleep(1000);
+            _gfx.clear();
+            rolloutNode->getBoard().drawSelf(_gfx);
+            for (size_t i = 0; i < rolloutNode->getChildrenNodes().size(); i++)
+            {
+                sf::VertexArray lines(sf::LinesStrip, 2);
+                lines[0].position = rolloutNode->getBoard().indexToPosition(rolloutNode->getChildrenNodes()[i]->getMovesMade().front().x) * rolloutNode->getBoard().getTileWidth() + sf::Vector2<float>(rolloutNode->getBoard().getBoardLength() / 16.0f, rolloutNode->getBoard().getBoardLength() / 16.0f);
+                lines[1].position = rolloutNode->getBoard().indexToPosition(rolloutNode->getChildrenNodes()[i]->getMovesMade().front().y) * rolloutNode->getBoard().getTileWidth() + sf::Vector2<float>(rolloutNode->getBoard().getBoardLength() / 16.0f, rolloutNode->getBoard().getBoardLength() / 16.0f);
+                _gfx.draw(lines);
+            }
+            _gfx.display();
+            std::cout << "Evaluation: " << rolloutNode->getEvaluation() << "\n";*/
+
+
+            rolloutNode = rolloutPolicy(rolloutNode);
+        }
+
+        return rolloutNode->getScore();
+    }
+    return node->getScore();
+}
+// Get random child node
+Game::MCTS_Node* Game::rolloutPolicy(Game::MCTS_Node* node)
+{
+    return node->getChildrenNodes()[(int(randPercent(gen) * float(int(node->getChildrenNodes().size()) + 1))) % node->getChildrenNodes().size()].get();
+}
+// Picks the child with the highest number of visits
+Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
+{
+    std::cout << "best_child called\n";
+
+    if (node->isNotTerminal())
+    {
+        std::cout << "children count = " << node->getChildrenNodes().size() << "\n";
+
+        MCTS_Node* bestChild = node->getChildrenNodes()[0].get();
+
+        size_t indexOfBestChild = 0;
+        for (size_t i = 0; i < node->getChildrenNodes().size(); i++)
+        {
+            if (node->getChildrenNodes()[i] == nullptr)
+                std::cout << "nullptr child\n";
+
+            if (node->getChildrenNodes()[i]->getVisitCount() > bestChild->getVisitCount())
+            {
+                bestChild = node->getChildrenNodes()[i].get();
+                indexOfBestChild = i;
+            }
+        }
+
+        /*for (auto& child : node->getChildrenNodes())
+        {
+            if(child == nullptr)
+                std::cout << "nullptr child\n";
+
+            if (child->getVisitCount() > bestChild->getVisitCount())
+                bestChild = child.get();
+        }*/
+        std::cout << "Before child return\n";
+
+        if (bestChild != nullptr)
+        {
+            return bestChild;
+            /*int nodeCountBefore = MCTS_Node::getNodeCount();
+            _mCTS_RootNode = std::move(node->getChildrenNodes()[indexOfBestChild]);
+            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+            return _mCTS_RootNode.get();*/
+        }
+    }
+    return node;
+}
+// Back propagates data back up the search tree
+void Game::backPropagate(Game::MCTS_Node* node, float result)
+{
+    if (node->isRoot())
+        return;
+    node->updateStats(result);
+    backPropagate(node->getParentNode(), result);
+}
+// Calls the Monte Carlo Tree Search algorithm
+std::queue<sf::Vector3<int>> Game::mCTS(Game::MCTS_Node* rootNode, float timeAvailableInSeconds)
+{
+    // Get time stamp
+    auto timeStart = std::chrono::steady_clock::now();
+    auto resourcesLeft = true;
+
+    while (resourcesLeft)
+    {
+        MCTS_Node* leaf = traverse(rootNode);
+        auto simulationResult = mCTS_Rollout(leaf);
+        backPropagate(leaf, simulationResult);
+
+        resourcesLeft = float((std::chrono::steady_clock::now() - timeStart).count()) / 1000000000.0f < timeAvailableInSeconds;
+        std::cout << "mCTS resources: " << float((std::chrono::steady_clock::now() - timeStart).count()) / 1000000000.0f << "\n";
+    }
+    return best_child(rootNode)->getMovesMade();
+}
+
+
 // Returns the optimal move upon a DFS of x turns of possible moves
 sf::Vector3<int> Game::miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
 {
@@ -1091,6 +1243,76 @@ sf::Vector3<int> Game::alphaBetaCall(bool doPrintout)
     return alphaBetaCall(_possibleMoves, _depthOfSearch, _turn, doPrintout);
 }
 
+sf::Vector3<int> Game::mCTSCall()
+{
+    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //// If no root, make root
+    //if (_mCTS_RootNode == nullptr)
+    //{
+    //    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //}
+    //else
+    //{
+    //    // Opponent Call
+    //    if (_lastTurnMCTS_wasCalled == _turnCount - 1)
+    //    {
+    //        // Do nothing. The root is as it should be
+    //    }
+    //    // Same team call after an opponent turn with no call
+    //    if (_lastTurnMCTS_wasCalled == _turnCount - 2)
+    //    {
+    //        if (_mCTS_RootNode->getChildrenNodes().size() > 0)
+    //        {
+    //            //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
+
+    //            //for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
+    //            //{
+    //            //    if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
+    //            //    {
+    //            //        matchingChild = _mCTS_RootNode->getChildrenNodes()[i].get();
+
+    //            //        int nodeCountBefore = MCTS_Node::getNodeCount();
+    //            //        _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[i]);
+    //            //        std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+    //            //    }
+    //            //}
+
+    //            bool matchFound = false;
+    //            for (auto& child : _mCTS_RootNode->getChildrenNodes())
+    //            {
+    //                if (child->getBoard().getBoardTiles() == _board.getBoardTiles())
+    //                {
+    //                    int nodeCountBefore = MCTS_Node::getNodeCount();
+    //                    _mCTS_RootNode = std::move(child);
+    //                    std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+
+    //                    matchFound = true;
+    //                    break;
+    //                }
+    //            }
+    //            if(!matchFound)
+    //                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //        }
+    //        else
+    //        {
+    //            // Just make a new root node
+    //            _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //        }
+    //    }
+    //}
+
+    // If we have a set of moves that need to be made in succession (jumps)
+    if (_mCTS_Moves.size() == 0)
+    {
+        _mCTS_Moves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
+        _lastTurnMCTS_wasCalled = _turnCount;
+    }
+
+    auto front = _mCTS_Moves.front();
+    _mCTS_Moves.pop();
+    return front;
+}
+
 // Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
 void Game::alphaBetaMiniMaxCompare(bool doPrintout)
 {
@@ -1181,6 +1403,16 @@ void Game::makeAlphaBetaMove(bool doPrintout)
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
             std::cout << "Average branch factor: " << (float)_branchCount / (float)_branchSplitCount << std::endl;
         }
+
+        finalizeMove();
+    }
+}
+// Uses  the Monte Carlo Tree Search algorithm to pick a move
+void Game::makeMCTS_Move()
+{
+    if (_possibleMoves.size() > 0)
+    {
+        _latestMove = mCTSCall();
 
         finalizeMove();
     }

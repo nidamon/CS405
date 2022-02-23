@@ -87,7 +87,7 @@ void Menu::runGame()
 	// Game running code here
 	if (_game == nullptr) // Create a new game
 	{
-		_game = std::move(std::make_unique<Game>(_gfx, getPlayer1Color(), getPlayer2Color(), _tournamentModeOn, _difficulty, _muscleHeadDepth));
+		_game = std::move(std::make_unique<Game>(_gfx, getPlayer1Color(), getPlayer2Color(), _tournamentModeOn, _difficulty, _depth));
 		_game->enableDebugPrintout(true);
 	}
 	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
@@ -184,17 +184,25 @@ void Menu::setupOptionsMenu()
 
 	// Difficulty levels
 
-	// No Brainer
+	// Randomness
 	areaToDisplay = sf::IntRect({ 0, 20 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
 	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
-	// Muscle Head
-	areaToDisplay = sf::IntRect({ 0, 40 }, { 114, 41 });
+	// MiniMax
+	areaToDisplay = sf::IntRect({ 0, 40 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
 	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
+	// Alpha Beta
+	areaToDisplay = sf::IntRect({ 0, 60 }, { 114, 20 });
+	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
+	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
+	// MCTS
+	areaToDisplay = sf::IntRect({ 114, 60 }, { 114, 20 });
+	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
+	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
 	setOptionsMenuButtons();
 }
@@ -211,9 +219,9 @@ void Menu::displayOptionsMenu()
 	_gfx.draw(_playerPieces[_playerColor]);
 	_gfx.draw(_opponentPieces[_opponentColor]);
 
-	// Muscle Head
-	if (_difficulty == 1)
-		_gfx.draw(_numbers1To9[_muscleHeadDepth - 1]);
+	// Minimax or AlphaBeta
+	if (_difficulty == 1 || _difficulty == 2)
+		_gfx.draw(_numbers1To9[_depth - 1]);
 
 	drawButtons(_optionsMenuButtons);
 
@@ -286,17 +294,17 @@ void Menu::setOptionsMenuButtons()
 		_optionsMenuButtons.push_back(difficultyRightArrow);
 	}
 
-	// Difficulty - Muscle Head
+	// Difficulty - DepthShift
 	{
 		// Difficulty - Muscle Head left arrow
-		Button difficultyMuscleHeadLeftArrow(Button::Purpose::MuscleHeadLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		Button difficultyMuscleHeadLeftArrow(Button::Purpose::DepthShiftLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
 		position = { 17 + 31, 97 + 24 };
 		difficultyMuscleHeadLeftArrow.setPosition(position + positionOffset);
 		difficultyMuscleHeadLeftArrow.setActive(false);
 		_optionsMenuButtons.push_back(difficultyMuscleHeadLeftArrow);
 
 		// Difficulty - Muscle Head right arrow
-		Button difficultyMuscleHeadRightArrow(Button::Purpose::MuscleHeadRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		Button difficultyMuscleHeadRightArrow(Button::Purpose::DepthShiftRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
 		position = { 17 + 65, 97 + 24 };
 		difficultyMuscleHeadRightArrow.setPosition(position + positionOffset);
 		difficultyMuscleHeadRightArrow.setActive(false);
@@ -354,11 +362,11 @@ void Menu::optionsMenuButtonCheck()
 				difficultyShift(1);
 				return;
 
-			case Menu::Button::Purpose::MuscleHeadLeftArrow:
-				muscleHeadDepthShift(-1);
+			case Menu::Button::Purpose::DepthShiftLeftArrow:
+				depthShift(-1);
 				return;
-			case Menu::Button::Purpose::MuscleHeadRightArrow:
-				muscleHeadDepthShift(1);
+			case Menu::Button::Purpose::DepthShiftRightArrow:
+				depthShift(1);
 				return;
 			case Button::Purpose::Back:
 				_currentState = State::Main;
@@ -487,24 +495,24 @@ void Menu::difficultyShift(int shift)
 	if (_difficulty < 0)
 		_difficulty = _difficultyCount - 1;
 
-	if (_difficulty == 1) // MuscleHead
+	if (_difficulty == 1 || _difficulty == 2) // DepthShift
 	{
-		getButton(Button::Purpose::MuscleHeadLeftArrow, _optionsMenuButtons)->setActive(true);
-		getButton(Button::Purpose::MuscleHeadRightArrow, _optionsMenuButtons)->setActive(true);
+		getButton(Button::Purpose::DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
+		getButton(Button::Purpose::DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
 	}
 	else
 	{
-		getButton(Button::Purpose::MuscleHeadLeftArrow, _optionsMenuButtons)->setActive(false);
-		getButton(Button::Purpose::MuscleHeadRightArrow, _optionsMenuButtons)->setActive(false);
+		getButton(Button::Purpose::DepthShiftLeftArrow, _optionsMenuButtons)->setActive(false);
+		getButton(Button::Purpose::DepthShiftRightArrow, _optionsMenuButtons)->setActive(false);
 	}
 }
-void Menu::muscleHeadDepthShift(int shift)
+void Menu::depthShift(int shift)
 {
-	_muscleHeadDepth += shift;
-	if (_muscleHeadDepth > 9)
-		_muscleHeadDepth = 1;
-	if (_muscleHeadDepth < 1)
-		_muscleHeadDepth = 9;
+	_depth += shift;
+	if (_depth > 9)
+		_depth = 1;
+	if (_depth < 1)
+		_depth = 9;
 }
 
 

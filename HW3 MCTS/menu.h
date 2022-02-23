@@ -42,8 +42,8 @@ private:
 			DifficultyRightArrow,
 
 			// Sub set of difficulty
-			MuscleHeadLeftArrow,
-			MuscleHeadRightArrow,
+			DepthShiftLeftArrow,
+			DepthShiftRightArrow,
 
 			Back
 		};
@@ -110,7 +110,7 @@ private:
 	void playerColorShift(int shift);
 	void opponentColorShift(int shift);
 	void difficultyShift(int shift);
-	void muscleHeadDepthShift(int shift);
+	void depthShift(int shift);
 private:
 
 	bool _mouseButtonPressed = false;
@@ -134,8 +134,8 @@ private:
 
 	bool _tournamentModeOn = false;
 	int _difficulty = 0; // 0=NoBrainer, 1=MuscleHead
-	const int _difficultyCount = 2;
-	int _muscleHeadDepth = 1; // MuscleHead depth
+	const int _difficultyCount = 4;
+	int _depth = 1; // MuscleHead depth
 
 
 	// Misc
