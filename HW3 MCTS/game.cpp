@@ -287,8 +287,10 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, PlayerColor player2Co
         _player2Color = PlayerColor::White;
 
     setupWinSprite();
-    if(difficulty == 1) // MuscleBrain
+    if(difficulty == 1 || difficulty == 2) // MiniMax or Alpha beta
         setDepthOfSearch(difficultyDepth);
+    if (difficulty == 3) // MCTS
+        _timeAvailableInSeconds = float(difficultyDepth);
     if(tournamentMode)
         setupRandomTournamentBoard();
 }
@@ -572,6 +574,7 @@ void Game::nextTurn()
 {
 	if (++_turn > 2)
 		_turn = 1;
+    ++_turnCount;
 }
 void Game::displayMoves()
 {
@@ -729,8 +732,7 @@ void Game::conductMoves(DWORD sleepTime)
             drawSelf();
             if (sleepTime > 0)
                 Sleep(sleepTime);
-        }
-        ++_turnCount;
+        }        
     }
 }
 
@@ -985,14 +987,18 @@ float Game::getUCB(Game::MCTS_Node* node)
 {
     if (node->getVisitCount() == 0)
         return INFINITY;
-    else
-    {
-        auto avg = node->getScore() / float(node->getVisitCount());
-        float c = 2.0f;
-        auto N = float(node->getParentNode()->getVisitCount());
-        auto n = float(node->getVisitCount());
-        return avg + c * sqrtf(log(N) / n);
-    }
+    auto avg = node->getScore() / float(node->getVisitCount());
+    float c = 2.0f;
+    auto N = float(node->getParentNode()->getVisitCount());
+    auto n = float(node->getVisitCount());
+
+    /*std::cout
+        << " <> avg: " << std::setw(10) << avg
+        << " N: " << std::setw(4) << N
+        << " n: " << std::setw(4) << n;
+
+    std::cout << " getUCB: " << avg + c * sqrtf(log1p(N) / n) << "\n"; */
+    return avg + c * sqrtf(log(N) / n);
 }
 
 Game::MCTS_Node* Game::traverse(Game::MCTS_Node* node)
@@ -1009,9 +1015,13 @@ Game::MCTS_Node* Game::bestUCB(Game::MCTS_Node* node)
         MCTS_Node* bestChild = node->getChildrenNodes()[0].get();
 
         for (auto& child : node->getChildrenNodes())
+        {
+            //std::cout << "Comparing new: " << getUCB(child.get()) << " to old: " << getUCB(bestChild) << "\n";
+
             if (getUCB(child.get()) > getUCB(bestChild))
                 bestChild = child.get();
-
+        }
+        //std::cout << "Result: " << getUCB(bestChild) << "\n";
         return bestChild;
     }
     return node;
@@ -1041,10 +1051,9 @@ float Game::mCTS_Rollout(Game::MCTS_Node* node)
 
             rolloutNode = rolloutPolicy(rolloutNode);
         }
-
-        return rolloutNode->getScore();
+        return rolloutNode->getEvaluation(_turn);
     }
-    return node->getScore();
+    return node->getEvaluation(_turn);
 }
 // Get random child node
 Game::MCTS_Node* Game::rolloutPolicy(Game::MCTS_Node* node)
@@ -1059,14 +1068,17 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
     if (node->isNotTerminal())
     {
         std::cout << "children count = " << node->getChildrenNodes().size() << "\n";
+        std::cout << "visit count = " << node->getVisitCount() << "\n";
+        std::cout << "Score = " << node->getScore() << "\n";
 
         MCTS_Node* bestChild = node->getChildrenNodes()[0].get();
 
         size_t indexOfBestChild = 0;
         for (size_t i = 0; i < node->getChildrenNodes().size(); i++)
         {
-            if (node->getChildrenNodes()[i] == nullptr)
-                std::cout << "nullptr child\n";
+            std::cout << "Child visit count: " << std::setw(6) << node->getChildrenNodes()[i]->getVisitCount()
+                << " Score: " << std:: setw(7) << node->getChildrenNodes()[i]->getScore()
+                << " UCB: " << getUCB(node->getChildrenNodes()[i].get()) << "\n";
 
             if (node->getChildrenNodes()[i]->getVisitCount() > bestChild->getVisitCount())
             {
@@ -1083,15 +1095,15 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
             if (child->getVisitCount() > bestChild->getVisitCount())
                 bestChild = child.get();
         }*/
-        std::cout << "Before child return\n";
 
         if (bestChild != nullptr)
         {
-            return bestChild;
-            /*int nodeCountBefore = MCTS_Node::getNodeCount();
+            //return bestChild;
+            int nodeCountBefore = MCTS_Node::getNodeCount();
             _mCTS_RootNode = std::move(node->getChildrenNodes()[indexOfBestChild]);
+            _mCTS_RootNode->setParentPointer(nullptr);
             std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
-            return _mCTS_RootNode.get();*/
+            return _mCTS_RootNode.get();
         }
     }
     return node;
@@ -1099,9 +1111,10 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
 // Back propagates data back up the search tree
 void Game::backPropagate(Game::MCTS_Node* node, float result)
 {
+    //std::cout << "BackPropagate called\n";
+    node->updateStats(result);
     if (node->isRoot())
         return;
-    node->updateStats(result);
     backPropagate(node->getParentNode(), result);
 }
 // Calls the Monte Carlo Tree Search algorithm
@@ -1118,7 +1131,7 @@ std::queue<sf::Vector3<int>> Game::mCTS(Game::MCTS_Node* rootNode, float timeAva
         backPropagate(leaf, simulationResult);
 
         resourcesLeft = float((std::chrono::steady_clock::now() - timeStart).count()) / 1000000000.0f < timeAvailableInSeconds;
-        std::cout << "mCTS resources: " << float((std::chrono::steady_clock::now() - timeStart).count()) / 1000000000.0f << "\n";
+        //std::cout << "mCTS resources: " << float((std::chrono::steady_clock::now() - timeStart).count()) / 1000000000.0f << "\n";
     }
     return best_child(rootNode)->getMovesMade();
 }
@@ -1245,67 +1258,83 @@ sf::Vector3<int> Game::alphaBetaCall(bool doPrintout)
 
 sf::Vector3<int> Game::mCTSCall()
 {
-    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-    //// If no root, make root
-    //if (_mCTS_RootNode == nullptr)
-    //{
-    //    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-    //}
-    //else
-    //{
-    //    // Opponent Call
-    //    if (_lastTurnMCTS_wasCalled == _turnCount - 1)
-    //    {
-    //        // Do nothing. The root is as it should be
-    //    }
-    //    // Same team call after an opponent turn with no call
-    //    if (_lastTurnMCTS_wasCalled == _turnCount - 2)
-    //    {
-    //        if (_mCTS_RootNode->getChildrenNodes().size() > 0)
-    //        {
-    //            //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
+    std::cout << "Turn count: " << _turnCount << "\n";
+    std::cout << "_lastTurnMCTS_wasCalled count: " << _lastTurnMCTS_wasCalled << "\n";
+    
 
-    //            //for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
-    //            //{
-    //            //    if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
-    //            //    {
-    //            //        matchingChild = _mCTS_RootNode->getChildrenNodes()[i].get();
+    // If no root, make root
+    if (_mCTS_RootNode == nullptr)
+    {
+        _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    }
+    else
+    {
+        // Opponent Call
+        if (_lastTurnMCTS_wasCalled == _turnCount - 1)
+        {
+            // Do nothing. The root is as it should be
+        }
+        // Same team call after an opponent turn with no call
+        else if (_lastTurnMCTS_wasCalled == _turnCount - 2)
+        {
+            //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
+            int indexOfMatch = -1;
+            for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
+            {
+                if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
+                {
+                    indexOfMatch = i;
+                    break;
+                    //matchingChild = _mCTS_RootNode->getChildrenNodes()[i].get();
 
-    //            //        int nodeCountBefore = MCTS_Node::getNodeCount();
-    //            //        _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[i]);
-    //            //        std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
-    //            //    }
-    //            //}
 
-    //            bool matchFound = false;
-    //            for (auto& child : _mCTS_RootNode->getChildrenNodes())
-    //            {
-    //                if (child->getBoard().getBoardTiles() == _board.getBoardTiles())
-    //                {
-    //                    int nodeCountBefore = MCTS_Node::getNodeCount();
-    //                    _mCTS_RootNode = std::move(child);
-    //                    std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+                }
+            }
+            int nodeCountBefore = MCTS_Node::getNodeCount();
+            if (indexOfMatch != -1)
+            {
+                _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[indexOfMatch]);
+                _mCTS_RootNode->setParentPointer(nullptr);
+            }
+            else
+            {
+                std::cout << "MCTS root swap FAILURE.\n";
+                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+            }
+            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+            /*bool matchFound = false;
+            for (auto& child : _mCTS_RootNode->getChildrenNodes())
+            {
+                if (child->getBoard().getBoardTiles() == _board.getBoardTiles())
+                {
+                    int nodeCountBefore = MCTS_Node::getNodeCount();
+                    _mCTS_RootNode = std::move(child);
+                    std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
 
-    //                    matchFound = true;
-    //                    break;
-    //                }
-    //            }
-    //            if(!matchFound)
-    //                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-    //        }
-    //        else
-    //        {
-    //            // Just make a new root node
-    //            _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-    //        }
-    //    }
-    //}
+                    matchFound = true;
+                    break;
+                }
+            }
+            if (!matchFound)
+                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));*/
+        }
+        else
+        {
+            // Just make a new root node
+            _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+        }
+
+    }
 
     // If we have a set of moves that need to be made in succession (jumps)
     if (_mCTS_Moves.size() == 0)
     {
+        std::cout << "Before call: " << MCTS_Node::getNodeCount() << " nodes\n";
         _mCTS_Moves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
         _lastTurnMCTS_wasCalled = _turnCount;
+
+        std::cout << "After call: " << MCTS_Node::getNodeCount() << " nodes\n";
+        std::cout << "Node size: " << sizeof(*_mCTS_RootNode) << "\n";
     }
 
     auto front = _mCTS_Moves.front();
@@ -1412,7 +1441,14 @@ void Game::makeMCTS_Move()
 {
     if (_possibleMoves.size() > 0)
     {
-        _latestMove = mCTSCall();
+        if (_possibleMoves.size() == 1)
+        {
+            _latestMove = _possibleMoves[0];
+        }
+        else
+        {
+            _latestMove = mCTSCall();
+        }
 
         finalizeMove();
     }

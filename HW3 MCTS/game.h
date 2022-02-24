@@ -11,6 +11,8 @@ This is the header file for the game class that will handle the game.
 #include "board.h"
 #include <chrono>
 #include <queue>
+#include <memory>
+#include <iomanip>
 
 class Game
 {
@@ -74,8 +76,8 @@ public:
 		{
 			++_MCTS_nodeCount;
 		}
-		MCTS_Node(Board& board, int teamTurn, std::queue<sf::Vector3<int>>& movesMade)
-			: _board(board), _teamTurn(teamTurn), _movesMade(movesMade)
+		MCTS_Node(MCTS_Node* parentNode, Board& board, int teamTurn, std::queue<sf::Vector3<int>>& movesMade)
+			: _parentNode(parentNode), _board(board), _teamTurn(teamTurn), _movesMade(movesMade)
 		{
 			++_MCTS_nodeCount;
 		}
@@ -153,12 +155,15 @@ public:
 		}
 		void updateStats(float addScore)
 		{
+			//std::cout << "updateStats called\n";
 			setStats(getScore() + addScore, getVisitCount() + 1);
 		}
 
-		float getEvaluation()
+		float getEvaluation(int teamTurn)
 		{
-			return boardEvaluate(_board.getBoardTiles(), _teamTurn);
+			if (teamTurn == _teamTurn)
+				return 0.0f;
+			return 1.0f;
 		}
 		void generateChildren() 
 		{
@@ -189,7 +194,7 @@ public:
 						for (auto& moveSequences : possibleMoves)
 						{
 							Board newBoard(Board::portrayMove(_board.getBoardTiles(), moveSequences.front()));
-							auto child = std::make_unique<MCTS_Node>(newBoard, nextTurn(), moveSequences);
+							auto child = std::make_unique<MCTS_Node>(this, newBoard, nextTurn(), moveSequences);
 							_childrenNodes.push_back(std::move(child));
 						}
 					}
@@ -199,6 +204,10 @@ public:
 			}
 		}
 
+		void setParentPointer(MCTS_Node* newParentNode)
+		{
+			_parentNode = newParentNode;
+		}
 		static int getNodeCount()
 		{
 			return _MCTS_nodeCount;
@@ -227,7 +236,7 @@ public:
 				if (possibleJumps.empty())
 				{
 					movesOUT.push_back(currentMoveSequence);				
-					auto child = std::make_unique<MCTS_Node>(newBoard, nextTurn(), currentMoveSequence);
+					auto child = std::make_unique<MCTS_Node>(this, newBoard, nextTurn(), currentMoveSequence);
 					_childrenNodes.push_back(std::move(child));
 				}
 				else
@@ -329,7 +338,7 @@ private:
 
 	int _lastTurnMCTS_wasCalled = 0;
 	std::unique_ptr<MCTS_Node> _mCTS_RootNode = nullptr;
-	float _timeAvailableInSeconds = 10.0f;
+	float _timeAvailableInSeconds = 1.0f;
 	// MCTS moves
 	std::queue<sf::Vector3<int>> _mCTS_Moves;
 

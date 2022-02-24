@@ -219,8 +219,8 @@ void Menu::displayOptionsMenu()
 	_gfx.draw(_playerPieces[_playerColor]);
 	_gfx.draw(_opponentPieces[_opponentColor]);
 
-	// Minimax or AlphaBeta
-	if (_difficulty == 1 || _difficulty == 2)
+	// Minimax or AlphaBeta or MCTS
+	if (_difficulty == 1 || _difficulty == 2 || _difficulty == 3)
 		_gfx.draw(_numbers1To9[_depth - 1]);
 
 	drawButtons(_optionsMenuButtons);
@@ -495,7 +495,7 @@ void Menu::difficultyShift(int shift)
 	if (_difficulty < 0)
 		_difficulty = _difficultyCount - 1;
 
-	if (_difficulty == 1 || _difficulty == 2) // DepthShift
+	if (_difficulty == 1 || _difficulty == 2 || _difficulty == 3) // DepthShift
 	{
 		getButton(Button::Purpose::DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
 		getButton(Button::Purpose::DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
