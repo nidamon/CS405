@@ -165,10 +165,15 @@ public:
 				return 0.0f;
 			return 1.0f;
 		}
+		void setGeneratedAvailableChildren(bool b)
+		{
+			_generatedAvailableChildren = b;
+			_childrenNodes.clear();
+		}
 		void generateChildren() 
 		{
 			if (!_generatedAvailableChildren)
-			{
+			{				
 				std::vector<sf::Vector3<int>> possibleGeneratedMoves;
 				_board.generateMoves(possibleGeneratedMoves, _teamTurn);
 
@@ -208,6 +213,12 @@ public:
 		{
 			_parentNode = newParentNode;
 		}
+		/*std::unique_ptr<MCTS_Node>& removeMatchingChild(MCTS_Node* childNode)
+		{
+			for (auto& p : _childrenNodes)
+				if (p->getBoard().getBoardTiles() == childNode->getBoard().getBoardTiles())
+					return p;
+		}*/
 		static int getNodeCount()
 		{
 			return _MCTS_nodeCount;
@@ -278,7 +289,7 @@ private:
 	// Make moves based on rollout policy till result
 	float mCTS_Rollout(MCTS_Node* node);
 	// Get random child node
-	MCTS_Node* rolloutPolicy(MCTS_Node* node);
+	std::unique_ptr<MCTS_Node>& rolloutPolicy(MCTS_Node* node);
 	// Picks the child with the highest number of visits
 	MCTS_Node* best_child(MCTS_Node* node);
 	// Back propagates data back up the search tree
@@ -291,7 +302,7 @@ private:
 	sf::Vector3<int> miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
 	sf::Vector3<int> miniMaxCall(bool doPrintout);
 	// Returns the optimal move upon an alpha beta DFS of x turns of possible moves 2x to 5x and sometimes 10x faster although results are slightly different at times
-	sf::Vector3<int> alphaBetaCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
+	sf::Vector3<int> alphaBetaCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
 	sf::Vector3<int> alphaBetaCall(bool doPrintout);
 
 	sf::Vector3<int> mCTSCall();

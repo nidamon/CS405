@@ -245,21 +245,21 @@ std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
-Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, sf::Vector2u boardsize, PlayerColor player2Color)
-    : _board(setPlayer2Color(playerColor, player2Color)), _gfx(gfx)
+Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, sf::Vector2u boardsize, PlayerColor player2Color)
+    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx)
 {
     _gfx.setSize(boardsize);
 
     // Player 1 or Red player
-    if (playerColor == PlayerColor::CPU_playerGame)
+    if (player1Color == PlayerColor::CPU_playerGame)
         _userTurn = 0; // Player has no turn
-    else if (playerColor == PlayerColor::Red)
+    else if (player1Color == PlayerColor::Red)
         _userTurn = 1;
     else
         _userTurn = 2;
 
     // Player 1 or Red player
-    if (playerColor == PlayerColor::Black)
+    if (player2Color == PlayerColor::Black || player1Color == PlayerColor::Black)
         _player2Color = PlayerColor::Black;
     else
         _player2Color = PlayerColor::White;
@@ -269,19 +269,21 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, sf::Vector2u boardsiz
     _difficulty = 1;
     setupRandomTournamentBoard();
 }
-Game::Game(sf::RenderWindow& gfx, PlayerColor playerColor, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth)
-    : _board(setPlayer2Color(playerColor, player2Color)), _gfx(gfx), _difficulty(difficulty)
+Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth)
+    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx), _difficulty(difficulty)
 {
     // Player 1 or Red player
-    if (playerColor == PlayerColor::CPU_playerGame)
+    if (player1Color == PlayerColor::CPU_playerGame)
         _userTurn = 0; // Player has no turn
-    else if (playerColor == PlayerColor::Red)
+    else if (player1Color == PlayerColor::Red)
         _userTurn = 1;
     else
         _userTurn = 2;
 
+    //_userTurn = 0;
+
     // Player 1 or Red player
-    if (playerColor == PlayerColor::Black)
+    if (player2Color == PlayerColor::Black || player1Color == PlayerColor::Black)
         _player2Color = PlayerColor::Black;
     else
         _player2Color = PlayerColor::White;
@@ -720,6 +722,13 @@ void Game::conductMoves(DWORD sleepTime)
                 makeAlphaBetaMove(_doDebugPrintout);
                 break; 
             case 3: // Monte Carlo Tree Search
+                /*if (_turn == 1)
+                {
+                    auto depthSave = _depthOfSearch;
+                    _depthOfSearch = 8;
+                    makeAlphaBetaMove(_doDebugPrintout);
+                    _depthOfSearch = depthSave;
+                }*/
                 makeMCTS_Move();
                 break; 
             default:
@@ -907,8 +916,8 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
 float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float& a, float& b)
 {
     int teamTurn = turn;
-        if (turn > 2)
-            teamTurn = turn - 2;
+    if (turn > 2)
+        teamTurn = turn - 2;
 
     auto getMoves = [&](std::vector<sf::Vector3<int>>& possibleMoves) {
         if (additionalJumps.empty())
@@ -918,9 +927,7 @@ float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, co
     };
 
     ++_alphaBetaCalls;
-    float value = 1000.0f; // Get min
-    if (teamTurn == maximizingTurn)
-        value = -1000.0f; // Get max 
+    float value = 1000.0f; 
 
     // Base case for recursion
     if (depth > 0)
@@ -935,12 +942,21 @@ float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, co
         // Test all available moves
         getMoves(possibleMoves);
         _branchCount += (int)possibleMoves.size();
-        for (size_t i = 0; i < possibleMoves.size(); i++)
+        // Adjust for any jumps
+        if (possibleMoves.size() > 0)
         {
-            // Adjust for any jumps
             if (possibleMoves[0].z != -1)
                 jumpAdjustment = 1;
 
+            std::sort(possibleMoves.begin(), possibleMoves.end(),
+                [&](const sf::Vector3<int>& a, const sf::Vector3<int>& b) {
+                    return boardEvaluate(Board::portrayMove(board.getBoardTiles(), a), maximizingTurn)
+                         > boardEvaluate(Board::portrayMove(board.getBoardTiles(), b), maximizingTurn);
+                });
+        }
+
+        for (size_t i = 0; i < possibleMoves.size(); i++)
+        {
             int teamAdjustment = 0;
             // Get a new board with new piece positions
             Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleMoves[i]));
@@ -952,12 +968,24 @@ float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, co
                 newBoard.getIndividualPieceMoves(newAdditionalJumps, possibleMoves[i].y, teamTurn, true);
                 if (newAdditionalJumps.size() > 0)
                     teamAdjustment = -1; // If can make another jump
-                else
-                    jumpAdjustment = 0;
             }
+
+            /*newBoard.drawSelf(_gfx);  
+            for (size_t i = 0; i < possibleMoves.size(); i++)
+            {
+                sf::VertexArray lines(sf::LinesStrip, 2);
+                lines[0].position = _board.indexToPosition(possibleMoves[i].x) * _board.getTileWidth() + sf::Vector2<float>(_board.getBoardLength() / 16.0f, _board.getBoardLength() / 16.0f);
+                lines[1].position = _board.indexToPosition(possibleMoves[i].y) * _board.getTileWidth() + sf::Vector2<float>(_board.getBoardLength() / 16.0f, _board.getBoardLength() / 16.0f);
+                _gfx.draw(lines);
+            }
+            _gfx.display();
+            Sleep(500);*/
 
             // Recursion call
             valHolder = alphaBeta(newBoard, (teamTurn + teamAdjustment + 1), maximizingTurn, depth - 1 + jumpAdjustment, newAdditionalJumps, a, b);
+
+            if (value == 1000.0f)
+                value = valHolder;
 
             // Get new min or max
             if (teamTurn == maximizingTurn) // Get Max
@@ -975,7 +1003,7 @@ float Game::alphaBeta(Board& board, const int turn, const int maximizingTurn, co
                 b = std::min(b, value);
             }
         }
-        if(possibleMoves.size() == 0)
+        if (possibleMoves.size() == 0)
             return boardEvaluate(board.getBoardTiles(), maximizingTurn);
 
         return value;
@@ -1031,8 +1059,9 @@ float Game::mCTS_Rollout(Game::MCTS_Node* node)
 {
     if (node->isNotTerminal())
     {
-        auto rolloutNode = rolloutPolicy(node);
+        std::unique_ptr<Game::MCTS_Node>& saveRoller = rolloutPolicy(node);
 
+        auto rolloutNode = saveRoller.get();
         while (rolloutNode->isNotTerminal())
         {
             /*Sleep(1000);
@@ -1047,18 +1076,19 @@ float Game::mCTS_Rollout(Game::MCTS_Node* node)
             }
             _gfx.display();
             std::cout << "Evaluation: " << rolloutNode->getEvaluation() << "\n";*/
-
-
-            rolloutNode = rolloutPolicy(rolloutNode);
+            
+            rolloutNode = rolloutPolicy(rolloutNode).get();
         }
-        return rolloutNode->getEvaluation(_turn);
+        auto result = rolloutNode->getEvaluation(_turn);
+        saveRoller->setGeneratedAvailableChildren(false); // Remove all rollout nodes
+        return result;
     }
     return node->getEvaluation(_turn);
 }
 // Get random child node
-Game::MCTS_Node* Game::rolloutPolicy(Game::MCTS_Node* node)
+std::unique_ptr<Game::MCTS_Node>& Game::rolloutPolicy(Game::MCTS_Node* node)
 {
-    return node->getChildrenNodes()[(int(randPercent(gen) * float(int(node->getChildrenNodes().size()) + 1))) % node->getChildrenNodes().size()].get();
+    return node->getChildrenNodes()[(int(randPercent(gen) * float(int(node->getChildrenNodes().size()) + 1))) % node->getChildrenNodes().size()];
 }
 // Picks the child with the highest number of visits
 Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
@@ -1196,15 +1226,15 @@ sf::Vector3<int> Game::miniMaxCall(bool doPrintout)
 }
 
 // Returns the optimal move upon an alpha beta DFS of x turns of possible moves 2x to 5x and sometimes 10x faster although results are slightly different at times
-sf::Vector3<int> Game::alphaBetaCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
+sf::Vector3<int> Game::alphaBetaCall(std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout)
 {
     std::vector<sf::Vector3<int>> optimalMove;
     float value = -10000.0f;
     float holder;
     int jumpAdjustment = 0;
 
-    float alpha = -10000.0f;
-    float beta = 10000.0f;
+    float alpha = -1000000.0f;
+    float beta = 1000000.0f;
 
     if (possibleMoves[0].z != -1) // Check if jump
         jumpAdjustment = 1;
@@ -1215,6 +1245,13 @@ sf::Vector3<int> Game::alphaBetaCall(const std::vector<sf::Vector3<int>>& possib
     {
         _branchSplitCount = 1;
         _branchCount += (int)possibleMoves.size();
+
+        std::sort(possibleMoves.begin(), possibleMoves.end(),
+            [&](const sf::Vector3<int>& a, const sf::Vector3<int>& b) {
+                return boardEvaluate(Board::portrayMove(_board.getBoardTiles(), a), turn)
+                         > boardEvaluate(Board::portrayMove(_board.getBoardTiles(), b), turn);
+            });
+
         for (size_t i = 0; i < possibleMoves.size(); i++)
         {
             int teamAdjustment = 0;
@@ -1334,7 +1371,7 @@ sf::Vector3<int> Game::mCTSCall()
         _lastTurnMCTS_wasCalled = _turnCount;
 
         std::cout << "After call: " << MCTS_Node::getNodeCount() << " nodes\n";
-        std::cout << "Node size: " << sizeof(*_mCTS_RootNode) << "\n";
+        //std::cout << "Node size: " << sizeof(*_mCTS_RootNode) << "\n";
     }
 
     auto front = _mCTS_Moves.front();

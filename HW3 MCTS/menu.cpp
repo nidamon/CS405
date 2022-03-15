@@ -36,6 +36,7 @@ Menu::~Menu()
 
 void Menu::run()
 {
+	_gfx.setFramerateLimit(30);
 	while (_gfx.isOpen())
 	{
 		_mouseButtonPressed = false;
