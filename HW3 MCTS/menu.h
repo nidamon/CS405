@@ -17,6 +17,7 @@ private:
 	{
 		Main,
 		Options,		
+		Replays,
 		Play,
 		Quit
 	};
@@ -27,9 +28,11 @@ private:
 		enum class Purpose
 		{
 			Play,
+			Replays,
 			Options,
 			Quit,
 
+			// Options menu buttons
 			PlayerColorLeftArrow,
 			PlayerColorRightArrow,
 			OpponentColorLeftArrow,
@@ -45,7 +48,21 @@ private:
 			DepthShiftLeftArrow,
 			DepthShiftRightArrow,
 
-			Back
+			Back,
+
+			// Replays menu buttons
+			PreviousGame,
+			NextGame,
+
+			BackOneMove,
+			ForwardOneMove,
+			JumpBackFiveMoves,
+			JumpForwardFiveMoves,
+
+			PauseReplay,
+			PlayReplay,
+
+			ReturnToMain			
 		};
 	public:
 		Button(Purpose purpose, sf::Vector2<int> sourcePosition, sf::Vector2<int> sourceDimensions, sf::Texture& menuButtonTextures);
@@ -79,6 +96,7 @@ public:
 
 	void runMainMenu();
 	void runOptionsMenu();
+	void runReplaysMenu();
 	void runGame();
 
 private:
@@ -94,9 +112,15 @@ private:
 	void setOptionsMenuButtons();
 	void optionsMenuButtonCheck();
 
+	// Replays menu
+	void setupReplaysMenu();
+	void displayReplaysMenu();
+	void setReplaysMenuButtons();
+	void replaysMenuButtonCheck();
 
 	void drawMenuBackground();
 	void drawButtons(std::vector<Button>& buttons);
+	void drawNumber(sf::RenderWindow& gfx, int digitCount, int number, sf::Vector2<int> positionOffset);
 
 	Button* getButton(Button::Purpose purpose, std::vector<Button>& buttons);
 
@@ -107,10 +131,18 @@ private:
 	Game::PlayerColor getPlayer1Color();
 	Game::PlayerColor getPlayer2Color();
 
+	// Options menu functionality
 	void playerColorShift(int shift);
 	void opponentColorShift(int shift);
 	void difficultyShift(int shift);
 	void depthShift(int shift);
+
+	// Replays menu functionality
+	void prepReplayMenu();
+	void replayStepForwardsOnce();
+	void replayStepBackwardsOnce();
+	void setReplayBoard();
+	void exitReplays();
 private:
 
 	bool _mouseButtonPressed = false;
@@ -137,10 +169,24 @@ private:
 	const int _difficultyCount = 4;
 	int _depth = 1; // MuscleHead depth
 
+	// Replays menu
+	sf::Sprite _replaysSpriteTitle;
+	std::vector<Button> _replaysMenuButtons;
+	std::unique_ptr<Board> _replayBoard = nullptr;
+	size_t _gameLogIndex = 0;
+	size_t _gameLogMoveIndex = 0;
+	bool _replaysIsPaused = true;
+	std::chrono::time_point<std::chrono::steady_clock> _timePoint;
+	float _timeInBetweenSteps = 0.7f;
+	float _timeTillNextStepForward = -1.0f;
+	std::vector<PieceType> _piecesRemoved;
+	std::unique_ptr<GameLogs> _gameLogs = nullptr;
 
 	// Misc
 	sf::Texture _MenuTextures;
-	std::vector<sf::Sprite> _numbers1To9;
+	sf::Sprite _leftBorder;
+	sf::Sprite _rightBorder;
+	std::vector<sf::Sprite> _numbers0To9;
 	std::vector<sf::Sprite> _playerPieces;
 	std::vector<sf::Sprite> _opponentPieces;
 

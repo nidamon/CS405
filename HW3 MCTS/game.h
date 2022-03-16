@@ -8,11 +8,7 @@ This is the header file for the game class that will handle the game.
 #ifndef GAME_H
 #define GAME_H
 
-#include "board.h"
-#include <chrono>
-#include <queue>
-#include <memory>
-#include <iomanip>
+#include "gameLogs.h"
 
 class Game
 {
@@ -74,16 +70,18 @@ public:
 		MCTS_Node(Board& board, int teamTurn)
 			: _board(board), _teamTurn(teamTurn)
 		{
+			++_MCTS_currentNodeCount;
 			++_MCTS_nodeCount;
 		}
 		MCTS_Node(MCTS_Node* parentNode, Board& board, int teamTurn, std::queue<sf::Vector3<int>>& movesMade)
 			: _parentNode(parentNode), _board(board), _teamTurn(teamTurn), _movesMade(movesMade)
 		{
+			++_MCTS_currentNodeCount;
 			++_MCTS_nodeCount;
 		}
 		~MCTS_Node()
 		{
-			--_MCTS_nodeCount;
+			--_MCTS_currentNodeCount;
 		}
 
 		std::vector<std::unique_ptr<MCTS_Node>>& getChildrenNodes()
@@ -213,15 +211,17 @@ public:
 		{
 			_parentNode = newParentNode;
 		}
-		/*std::unique_ptr<MCTS_Node>& removeMatchingChild(MCTS_Node* childNode)
+		static int getCurrentNodeCount()
 		{
-			for (auto& p : _childrenNodes)
-				if (p->getBoard().getBoardTiles() == childNode->getBoard().getBoardTiles())
-					return p;
-		}*/
-		static int getNodeCount()
+			return _MCTS_currentNodeCount;
+		}
+		static int getNumNodesCreated()
 		{
 			return _MCTS_nodeCount;
+		}
+		static void resetNodeCount()
+		{
+			_MCTS_nodeCount = 0;
 		}
 	private:
 		void getFullJumpSet(std::vector<sf::Vector3<int>>& possibleGeneratedMovesIN, std::vector<std::queue<sf::Vector3<int>>> &movesOUT, 
@@ -278,6 +278,7 @@ public:
 		std::vector<std::unique_ptr<MCTS_Node>> _childrenNodes;
 		MCTS_Node* _parentNode = nullptr;
 
+		static int _MCTS_currentNodeCount;
 		static int _MCTS_nodeCount;
 	};
 
@@ -336,6 +337,8 @@ private:
 	int _turn = 1;
 	int _turnCount = 0;
 	bool _gameOver = false;
+	GameLogs::GameLog _currentGameLog;
+
 	sf::Vector3<int> _latestMove;
 	std::vector<sf::Vector3<int>> _possibleMoves;
 	std::vector<sf::Vector3<int>> _possibleAdditionalJumps;

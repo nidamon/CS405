@@ -239,6 +239,7 @@ sf::Sprite Game::_winSprite;
 
 
 // MCTS_node - Monte Carlo Tree Search Node
+int Game::MCTS_Node::_MCTS_currentNodeCount = 0;;
 int Game::MCTS_Node::_MCTS_nodeCount = 0;
 
 std::random_device r;
@@ -270,7 +271,7 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, sf::Vector2u boardsi
     setupRandomTournamentBoard();
 }
 Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth)
-    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx), _difficulty(difficulty)
+    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx), _difficulty(difficulty), _currentGameLog(GameLogs::getNewGameLog())
 {
     // Player 1 or Red player
     if (player1Color == PlayerColor::CPU_playerGame)
@@ -295,6 +296,12 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2C
         _timeAvailableInSeconds = float(difficultyDepth);
     if(tournamentMode)
         setupRandomTournamentBoard();
+
+    // If is black
+    if(setPlayer2Color(player1Color, player2Color))
+        _currentGameLog._p2Color = 'B';
+    else
+        _currentGameLog._p2Color = 'W';
 }
 Game::~Game()
 {
@@ -637,6 +644,7 @@ void Game::winCheck()
         {
             winDisplaySet(PlayerColor::Red);
             std::cout << "Red Wins" << std::endl;
+            _currentGameLog._winnerColor = 'R';
         }
         else // Red can't play
         {
@@ -644,18 +652,26 @@ void Game::winCheck()
             {
                 winDisplaySet(PlayerColor::Black);
                 std::cout << "Black Wins" << std::endl;
+                _currentGameLog._winnerColor = 'B';
             }
             else
             {
                 winDisplaySet(PlayerColor::White);
                 std::cout << "White Wins" << std::endl;
+                _currentGameLog._winnerColor = 'W';
             }
         }        
         _gameOver = true;
         if (!_isTesting)
         {
-            /*_stats.updateRawGameDataSheet(_turn, _userTurn);
-            _stats.displayStats();*/
+            _currentGameLog._turnCount = _turnCount;
+            if (_currentGameLog._gameNumber != -1)
+                GameLogs::saveGameLog(_currentGameLog);
+            else
+            {
+                std::cout << "Bad gameLog number (was -1)." << std::endl;
+                std::cout << _currentGameLog.getStr() << std::endl;
+            }
         }
     }
 }
@@ -1129,10 +1145,10 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
         if (bestChild != nullptr)
         {
             //return bestChild;
-            int nodeCountBefore = MCTS_Node::getNodeCount();
+            int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
             _mCTS_RootNode = std::move(node->getChildrenNodes()[indexOfBestChild]);
             _mCTS_RootNode->setParentPointer(nullptr);
-            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
+            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
             return _mCTS_RootNode.get();
         }
     }
@@ -1297,7 +1313,7 @@ sf::Vector3<int> Game::mCTSCall()
 {
     std::cout << "Turn count: " << _turnCount << "\n";
     std::cout << "_lastTurnMCTS_wasCalled count: " << _lastTurnMCTS_wasCalled << "\n";
-    
+
 
     // If no root, make root
     if (_mCTS_RootNode == nullptr)
@@ -1322,12 +1338,9 @@ sf::Vector3<int> Game::mCTSCall()
                 {
                     indexOfMatch = i;
                     break;
-                    //matchingChild = _mCTS_RootNode->getChildrenNodes()[i].get();
-
-
                 }
             }
-            int nodeCountBefore = MCTS_Node::getNodeCount();
+            int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
             if (indexOfMatch != -1)
             {
                 _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[indexOfMatch]);
@@ -1338,22 +1351,7 @@ sf::Vector3<int> Game::mCTSCall()
                 std::cout << "MCTS root swap FAILURE.\n";
                 _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
             }
-            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
-            /*bool matchFound = false;
-            for (auto& child : _mCTS_RootNode->getChildrenNodes())
-            {
-                if (child->getBoard().getBoardTiles() == _board.getBoardTiles())
-                {
-                    int nodeCountBefore = MCTS_Node::getNodeCount();
-                    _mCTS_RootNode = std::move(child);
-                    std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getNodeCount() << "\n";
-
-                    matchFound = true;
-                    break;
-                }
-            }
-            if (!matchFound)
-                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));*/
+            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
         }
         else
         {
@@ -1366,12 +1364,13 @@ sf::Vector3<int> Game::mCTSCall()
     // If we have a set of moves that need to be made in succession (jumps)
     if (_mCTS_Moves.size() == 0)
     {
-        std::cout << "Before call: " << MCTS_Node::getNodeCount() << " nodes\n";
+        std::cout << "Before call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
         _mCTS_Moves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
         _lastTurnMCTS_wasCalled = _turnCount;
 
-        std::cout << "After call: " << MCTS_Node::getNodeCount() << " nodes\n";
-        //std::cout << "Node size: " << sizeof(*_mCTS_RootNode) << "\n";
+        std::cout << "After call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
+        std::cout << "Total nodes created this call: " << MCTS_Node::getNumNodesCreated() << "\n";
+        MCTS_Node::resetNodeCount();
     }
 
     auto front = _mCTS_Moves.front();
@@ -1495,6 +1494,7 @@ void Game::finalizeMove()
     //_stats.addTurnData(_possibleMoves.size(), _latestMove);
     _possibleMoves.clear();
 
+    _currentGameLog.addMove(_latestMove);
     if (!_board.movePiece(_latestMove))
         if (_latestMove.z != -1) // We just jumped and no piece has been crowned
         {

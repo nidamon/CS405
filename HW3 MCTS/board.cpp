@@ -13,6 +13,10 @@ This is the source file for the board class.
 
 
 // Display
+sf::RenderTexture Board::_renderTexture;
+sf::Sprite Board::_renderTextureSprite;
+
+
 sf::Texture Board::_boardTexture;
 sf::Sprite Board::_boardSprite;
 
@@ -51,13 +55,19 @@ int Board::_boardCount = 0;
 
 Board::Board(bool player2IsBlack) : _tiles(std::vector<PieceType>(32, PieceType::NoPiece))
 {
+	sf::Vector2<float> rendTexDimensions(768, 768);
+	if (!_renderTexture.create(rendTexDimensions.x, rendTexDimensions.y))
+		std::cout << "Error in board _renderTexture create." << std::endl;
+	_renderTextureSprite.setTexture(_renderTexture.getTexture(), true);
+
 	setup();
 	playerPieceDisplaySetup(player2IsBlack);
 
 	if (!_boardTexture.loadFromFile("CheckerBoard.png"))
-		std::cout << "Error in board image load" << std::endl;
-
+		std::cout << "Error in board image load." << std::endl;
 	_boardSprite.setTexture(_boardTexture);
+	_boardSprite.setScale({ float(_renderTexture.getSize().x) / float(getBoardLength()), float(_renderTexture.getSize().x) / float(getBoardLength()) });
+
 	++_boardCount;
 }
 
@@ -135,19 +145,26 @@ void Board::playerPieceDisplaySetup(bool player2IsBlack)
 	_player1PieceKing.setTexture(_player1PieceKingTexture);
 	_player2PieceKing.setTexture(_player2PieceKingTexture);
 
-	setPieceScale(0.8f);
+	setPieceScale(0.8f * float(_renderTexture.getSize().x) / float(getBoardLength()));
 }
 
-void Board::drawSelf(sf::RenderWindow& gfx)
-{
-	gfx.draw(_boardSprite);
+void Board::drawSelf(sf::RenderWindow& gfx, float scale, sf::Vector2<float> position)
+{	
+	_renderTexture.draw(_boardSprite);
 	for (size_t i = 0; i < _tiles.size(); i++)
 	{
-		drawPiece(gfx, indexToPosition(i) * float(getBoardLength()) / 8.0f + _pieceOffset, i);
+		drawPiece(_renderTexture, indexToPosition(i) * float(_renderTexture.getSize().x) / 8.0f + _pieceOffset, i);
 	}
+	_renderTexture.display();
+
+	_renderTextureSprite.setScale({ scale / 3.0f, scale / 3.0f});
+	_renderTextureSprite.setPosition(position);
+
+	// Draw board textureSprite
+	gfx.draw(_renderTextureSprite);
 }
 
-void Board::drawPiece(sf::RenderWindow& gfx, sf::Vector2<float> position, int tilesIndex)
+void Board::drawPiece(sf::RenderTexture& gfx, sf::Vector2<float> position, int tilesIndex)
 {
 	switch (_tiles[tilesIndex])
 	{
@@ -213,6 +230,22 @@ sf::Vector2<int> Board::indexToXY(int tileIndex)
 {
 	return sf::Vector2<int>(tileIndex % 4, tileIndex / 4);
 }
+PieceType Board::getPieceAt(int tileIndex)
+{
+	if (tileIndex < _tiles.size() && tileIndex > 0)
+		return _tiles[tileIndex];
+	return PieceType::NoPiece;
+}
+void Board::placePieceAt(int tileIndex, PieceType piece)
+{
+	if (tileIndex < _tiles.size() && tileIndex > 0)
+	{
+		_tiles[tileIndex] = piece;
+	}
+	else
+		std::cout << "Tried to place a piece out of bounds in placePieceAt().\n";
+}
+
 
 // {-1, -1, -1} if invalid, otherwise returns {from, to, pieceJumpedIndex}
 sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
@@ -267,7 +300,8 @@ sf::Vector3<int> Board::getMoveToIndex(int tileIndex, int movement)
 void Board::setPieceScale(float newScale)
 {
 	_pieceScale = newScale;
-	_pieceOffset = { float(_length) / 16.0f - (_halfPieceLength * _pieceScale), float(_length) / 16.0f - (_halfPieceLength * _pieceScale) };
+	_pieceOffset = { float(_renderTexture.getSize().x) / 16.0f - (_halfPieceLength * _pieceScale),
+					 float(_renderTexture.getSize().x) / 16.0f - (_halfPieceLength * _pieceScale) };
 
 	// Pawns
 	_player1PiecePawn.setScale(_pieceScale, _pieceScale);

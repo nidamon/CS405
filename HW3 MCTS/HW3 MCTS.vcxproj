@@ -149,11 +149,13 @@
     <ClCompile Include="board.cpp" />
     <ClCompile Include="checkersMain.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="gameLogs.cpp" />
     <ClCompile Include="menu.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="board.h" />
     <ClInclude Include="game.h" />
+    <ClInclude Include="gameLogs.h" />
     <ClInclude Include="menu.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

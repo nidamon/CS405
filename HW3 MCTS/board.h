@@ -39,13 +39,13 @@ public:
 	Board(std::vector<PieceType> tiles);
 	~Board();
 
-	void drawSelf(sf::RenderWindow& gfx);
+	void drawSelf(sf::RenderWindow& gfx, float scale = 1.0f, sf::Vector2<float> position = { 0.0f, 0.0f });
 
 private:
 	void setup();
 	void playerPieceDisplaySetup(bool player2IsBlack);
 
-	void drawPiece(sf::RenderWindow& gfx, sf::Vector2<float> position, int tilesIndex);
+	void drawPiece(sf::RenderTexture& gfx, sf::Vector2<float> position, int tilesIndex);
 
 public:
 	static void pieceTypeToCout(PieceType pieceType);
@@ -53,6 +53,8 @@ public:
 	static sf::Vector2<float> indexToPosition(int tileIndex);
 	static int xyToIndex(int x, int y);
 	static sf::Vector2<int> indexToXY(int tileIndex);
+	PieceType getPieceAt(int tileIndex);
+	void placePieceAt(int tileIndex, PieceType piece);
 
 	// {-1, -1} if invalid, otherwise returns {from, to}
 	sf::Vector3<int> getMoveToIndex(int tileIndex, int movement);
@@ -85,6 +87,9 @@ private:
 	std::vector<PieceType> _tiles;
 
 	// Display
+	static sf::RenderTexture _renderTexture;
+	static sf::Sprite _renderTextureSprite;
+
 	static sf::Texture _boardTexture;
 	static sf::Sprite _boardSprite;
 
