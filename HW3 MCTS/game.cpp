@@ -247,7 +247,7 @@ std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
 Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, sf::Vector2u boardsize, PlayerColor player2Color)
-    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx)
+    : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx), _currentGameLog(GameLogs::getNewGameLog())
 {
     _gfx.setSize(boardsize);
 
@@ -268,7 +268,17 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, sf::Vector2u boardsi
     setupWinSprite();    
     setDepthOfSearch(4);
     _difficulty = 1;
-    setupRandomTournamentBoard();
+    _currentGameLog._startingBoard = setupRandomTournamentBoard();
+
+    // Current GameLog setup
+
+    // If is black
+    if (setPlayer2Color(player1Color, player2Color))
+        _currentGameLog._p2Color = 'B';
+    else
+        _currentGameLog._p2Color = 'W';
+
+
 }
 Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth)
     : _board(setPlayer2Color(player1Color, player2Color)), _gfx(gfx), _difficulty(difficulty), _currentGameLog(GameLogs::getNewGameLog())
@@ -295,7 +305,9 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2C
     if (difficulty == 3) // MCTS
         _timeAvailableInSeconds = float(difficultyDepth);
     if(tournamentMode)
-        setupRandomTournamentBoard();
+        _currentGameLog._startingBoard = setupRandomTournamentBoard();
+
+    // Current GameLog setup
 
     // If is black
     if(setPlayer2Color(player1Color, player2Color))
@@ -1529,11 +1541,18 @@ int Game::getBoardTile(size_t index)
 }
 
 // Sets up on of the 216 starting tournament boards
-void Game::setupRandomTournamentBoard()
+int Game::setupRandomTournamentBoard()
 {    
-    _board.setup(_startingBoards[(int(randPercent(gen) * float(int(_startingBoards.size()) + 1))) % _startingBoards.size()]);
+    int boardNum = (int(randPercent(gen) * float(int(_startingBoards.size()) + 1))) % _startingBoards.size();
+    _board.setup(_startingBoards[boardNum]);
     _turn = 2; // Player 2 goes next
+    return boardNum;
 }
+std::vector<std::vector<PieceType>>& Game::getTournamentBoards()
+{
+    return _startingBoards;
+}
+
 // Generates the 216 starting tournament boards
 void Game::tournamentBoardGen()
 {    

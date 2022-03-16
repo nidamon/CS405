@@ -329,7 +329,12 @@ private:
 	int getBoardTile(size_t index);
 
     // Sets up on of the 216 starting tournament boards
-    void setupRandomTournamentBoard();
+    int setupRandomTournamentBoard();
+
+public:
+	static std::vector<std::vector<PieceType>>& getTournamentBoards();
+
+private:
     // Generates the 216 starting tournament boards
 	void tournamentBoardGen();
 

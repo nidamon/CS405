@@ -24,7 +24,7 @@ GameLogs::~GameLogs()
 GameLogs::GameLog GameLogs::getNewGameLog()
 {
 	std::vector<sf::Vector3<int>> errorMovesMade;
-	GameLog gameLog(-1, 'e', 'e', 0, errorMovesMade);
+	GameLog gameLog(-1, 'e', 'e', -1, 0, errorMovesMade);
 
 	std::ifstream fin(_gameLogsFileName, std::ios::binary);
 	if (!fin)
@@ -143,12 +143,12 @@ std::vector<std::unique_ptr<GameLogs::GameLog>>& GameLogs::getLogs()
 // ###########################
 
 GameLogs::GameLog::GameLog()
-	: _gameNumber(-1), _p2Color('e'), _winnerColor('e'), _turnCount(0)
+	: _gameNumber(-1), _p2Color('e'), _winnerColor('e'), _startingBoard(-1), _turnCount(0)
 {
 
 }
-GameLogs::GameLog::GameLog(int gameNumber, char p2Color, char winnerColor, int turnCount, std::vector<sf::Vector3<int>>& movesMade, bool copyMovesMade)
-	: _gameNumber(gameNumber), _p2Color(p2Color), _winnerColor(winnerColor), _turnCount(turnCount)
+GameLogs::GameLog::GameLog(int gameNumber, char p2Color, char winnerColor, int startingBoard, int turnCount, std::vector<sf::Vector3<int>>& movesMade, bool copyMovesMade)
+	: _gameNumber(gameNumber), _p2Color(p2Color), _winnerColor(winnerColor), _startingBoard(startingBoard), _turnCount(turnCount)
 {
 	if (copyMovesMade)
 		_movesMade = movesMade;
@@ -161,11 +161,12 @@ GameLogs::GameLog GameLogs::GameLog::getGameLogFromString(std::string& gameLogSt
 	int gameNumber = -1;
 	char p2Color = 'E';
 	char winnerColor = 'E';
+	int startingBoard = -1;
 	int turnCount = 0;
 	std::vector<sf::Vector3<int>> movesMade;
 
 	std::istringstream dataExtraction(gameLogString);
-	dataExtraction >> gameNumber >> p2Color >> winnerColor >> turnCount;
+	dataExtraction >> gameNumber >> p2Color >> winnerColor >> startingBoard >> turnCount;
 
 	std::string junk;
 	while (true)
@@ -177,7 +178,7 @@ GameLogs::GameLog GameLogs::GameLog::getGameLogFromString(std::string& gameLogSt
 			break;
 	}
 
-	return GameLog(gameNumber, p2Color, winnerColor, turnCount, movesMade, false);
+	return GameLog(gameNumber, p2Color, winnerColor, startingBoard, turnCount, movesMade, false);
 }
 std::string GameLogs::GameLog::getStr()
 {
@@ -185,6 +186,7 @@ std::string GameLogs::GameLog::getStr()
 	strStream << std::setw(7) << _gameNumber
 		<< " " << _p2Color
 		<< " " << _winnerColor
+		<< " " << std::setw(3) << _startingBoard
 		<< std::setw(3) << _turnCount << " ";
 
 	for (size_t i = 0; i < _movesMade.size(); i++)

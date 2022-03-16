@@ -825,6 +825,10 @@ void Menu::setReplayBoard()
 		team2IsBlack = false;
 
 	_replayBoard = std::move(std::make_unique<Board>(team2IsBlack));
+
+	int startingBoard = _gameLogs->getLogs()[_gameLogIndex]->_startingBoard;
+	if(startingBoard != -1)
+		_replayBoard->setup(Game::getTournamentBoards()[startingBoard]);
 }
 void Menu::exitReplays()
 {

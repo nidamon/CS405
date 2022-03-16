@@ -26,7 +26,7 @@ public:
 	struct GameLog
 	{
 		GameLog();
-		GameLog(int gameNumber, char p2Color, char winnerColor, int turnCount, std::vector<sf::Vector3<int>>& movesMade, bool copyMovesMade = true);
+		GameLog(int gameNumber, char p2Color, char winnerColor, int startingBoard, int turnCount, std::vector<sf::Vector3<int>>& movesMade, bool copyMovesMade = true);
 
 		static GameLog getGameLogFromString(std::string& gameLogString);
 		std::string getStr();
@@ -35,6 +35,7 @@ public:
 		int _gameNumber = -1;
 		char _p2Color = 'e';
 		char _winnerColor = 'e';
+		int _startingBoard = -1;
 		int _turnCount = 0;
 
 		std::vector<sf::Vector3<int>> _movesMade;
