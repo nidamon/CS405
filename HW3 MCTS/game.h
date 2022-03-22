@@ -23,6 +23,7 @@ public:
 
     Game(sf::RenderWindow& gfx, PlayerColor playerColor = PlayerColor::Red, sf::Vector2u boardsize = { 512, 512 }, PlayerColor player2Color = PlayerColor::Black);
     Game(sf::RenderWindow& gfx, PlayerColor playerColor, PlayerColor player2Color, bool tournamentMode, int difficulty, int difficultyDepth = 1);
+	Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int p1Mode, int p1DifficultyDepth, int p2Mode, int p2DifficultyDepth);
 	~Game();
 
 	void run();
@@ -338,7 +339,13 @@ private:
     // Generates the 216 starting tournament boards
 	void tournamentBoardGen();
 
-    int _difficulty;
+
+	int _p1Mode;
+	int _p1Depth;
+	int _p2Mode;
+	int _p2Depth;
+
+    int _difficulty; // Do not change haphazardly!
 	int _turn = 1;
 	int _turnCount = 0;
 	bool _gameOver = false;

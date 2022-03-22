@@ -315,6 +315,37 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor player1Color, PlayerColor player2C
     else
         _currentGameLog._p2Color = 'W';
 }
+Game::Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int p1Mode, int p1DifficultyDepth, int p2Mode, int p2DifficultyDepth)
+    : _board(setPlayer2Color(PlayerColor::Red, p2Color)) , _gfx(gfx), _difficulty(0), _currentGameLog(GameLogs::getNewGameLog()),
+    _p1Mode(p1Mode), _p1Depth(p1DifficultyDepth), _p2Mode(p2Mode), _p2Depth(p2DifficultyDepth)
+{
+    if (p1Mode == 4) // Player 1 is user
+        _userTurn = 1; 
+    else if (p2Mode == 4) // Player 2 is user
+        _userTurn = 2;
+    else // Player has no turn
+        _userTurn = 0;
+
+    std::cout << _userTurn << std::endl;
+
+    // Player 1 or Red player
+    if (p2Color == PlayerColor::Black)
+        _player2Color = PlayerColor::Black;
+    else
+        _player2Color = PlayerColor::White;
+
+    setupWinSprite();    
+    if (tournamentMode)
+        _currentGameLog._startingBoard = setupRandomTournamentBoard();
+
+    // Current GameLog setup
+
+    // If player 2 is black
+    if (setPlayer2Color(PlayerColor::Red, p2Color))
+        _currentGameLog._p2Color = 'B';
+    else
+        _currentGameLog._p2Color = 'W';
+}
 Game::~Game()
 {
 }
@@ -732,8 +763,26 @@ void Game::conductMoves(DWORD sleepTime)
     {
         if (isUserTurn())
             userInputHandle();
-        else
-        {
+        else // Algorithms
+        { 
+            // Save values
+            int difficultySave = _difficulty;
+            int depthSave = _depthOfSearch;
+            if (_turn == 1) // Player 1
+            {
+                _difficulty = _p1Mode;
+                _depthOfSearch = _p1Depth;
+            }
+            else // Player 2
+            {
+                _difficulty = _p2Mode;
+                _depthOfSearch = _p2Depth;
+            }
+
+            if (_difficulty == 3) // MCTS
+                _timeAvailableInSeconds = float(_depthOfSearch);
+
+
             if(_isTesting)
                 drawSelf();
             if(sleepTime > 0)
@@ -750,13 +799,6 @@ void Game::conductMoves(DWORD sleepTime)
                 makeAlphaBetaMove(_doDebugPrintout);
                 break; 
             case 3: // Monte Carlo Tree Search
-                /*if (_turn == 1)
-                {
-                    auto depthSave = _depthOfSearch;
-                    _depthOfSearch = 8;
-                    makeAlphaBetaMove(_doDebugPrintout);
-                    _depthOfSearch = depthSave;
-                }*/
                 makeMCTS_Move();
                 break; 
             default:
@@ -765,6 +807,10 @@ void Game::conductMoves(DWORD sleepTime)
                 break;
             }
                 
+            // Return to previous values
+            _difficulty = difficultySave;
+            _depthOfSearch = depthSave;
+
 
             drawSelf();
             if (sleepTime > 0)

@@ -10,6 +10,8 @@ This is the header file for the menu class which handles the menus.
 
 #include "game.h"
 
+#define MENUBUTTONDEBUG
+
 class Menu
 {
 private:
@@ -33,20 +35,22 @@ private:
 			Quit,
 
 			// Options menu buttons
-			PlayerColorLeftArrow,
-			PlayerColorRightArrow,
-			OpponentColorLeftArrow,
-			OpponentColorRightArrow,
-
 			TournamentModeOn,
 			TournamentModeOff,
 
-			DifficultyLeftArrow,
-			DifficultyRightArrow,
+			Player1ModeLeftArrow,
+			Player1ModeRightArrow,
+			Player2ModeLeftArrow,
+			Player2ModeRightArrow,
+
+			Player2ColorLeftArrow,
+			Player2ColorRightArrow,
 
 			// Sub set of difficulty
-			DepthShiftLeftArrow,
-			DepthShiftRightArrow,
+			P1DepthShiftLeftArrow,
+			P1DepthShiftRightArrow,
+			P2DepthShiftLeftArrow,
+			P2DepthShiftRightArrow,
 
 			Back,
 
@@ -132,10 +136,11 @@ private:
 	Game::PlayerColor getPlayer2Color();
 
 	// Options menu functionality
-	void playerColorShift(int shift);
-	void opponentColorShift(int shift);
-	void difficultyShift(int shift);
-	void depthShift(int shift);
+	void player1ModeShift(int shift);
+	void player2ModeShift(int shift);
+	void player2ColorShift(int shift);
+	void player1DepthShift(int shift); 
+	void player2DepthShift(int shift);
 
 	// Replays menu functionality
 	void prepReplayMenu();
@@ -156,18 +161,21 @@ private:
 	// Options menu
 	sf::Sprite _optionsSpriteTitle;
 	sf::Sprite _mainOptionsSprite;
+	sf::Sprite _p2ColorSprite;
 	std::vector<sf::Sprite> _difficultyLevels;
 	std::vector<Button> _optionsMenuButtons;
 
 	bool _cPU_PlayerGame = false;
-
-	int _playerColor = 0; // 0=Red, 1=Black, 2=White
-	int _opponentColor = 1; // 0=Red, 1=Black, 2=White
-
+	
 	bool _tournamentModeOn = false;
-	int _difficulty = 0; // 0=NoBrainer, 1=MuscleHead
-	const int _difficultyCount = 4;
-	int _depth = 1; // MuscleHead depth
+	int _p1Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player
+	int _p1Depth = 1; 
+	int _p2Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player
+	int _p2Depth = 1; 
+	
+	int _p2Color = 1; // 1=Black, 2=White
+	const int _difficultyCount = 5; 
+
 
 	// Replays menu
 	sf::Sprite _replaysSpriteTitle;
@@ -187,8 +195,7 @@ private:
 	sf::Sprite _leftBorder;
 	sf::Sprite _rightBorder;
 	std::vector<sf::Sprite> _numbers0To9;
-	std::vector<sf::Sprite> _playerPieces;
-	std::vector<sf::Sprite> _opponentPieces;
+	std::vector<sf::Sprite> _colorPickPieces;
 
 	sf::Texture _MenuBackGroundTexture;
 	sf::Sprite _MenuBackGroundSprite;

@@ -7,6 +7,14 @@ This is the source file for the menu class which handles the menus.
 
 #include "menu.h"
 
+
+void buttonDebug(std::string debugText)
+{
+#ifdef MENUBUTTONDEBUG
+	std::cout << "[ButtonDebug] " + debugText;
+#endif // MENUBUTTONDEBUG
+}
+
 // ####################################################################
 // Menu
 // ####################################################################
@@ -119,7 +127,7 @@ void Menu::runGame()
 	// Game running code here
 	if (_game == nullptr) // Create a new game
 	{
-		_game = std::move(std::make_unique<Game>(_gfx, getPlayer1Color(), getPlayer2Color(), _tournamentModeOn, _difficulty, _depth));
+		_game = std::move(std::make_unique<Game>(_gfx, getPlayer2Color(), _tournamentModeOn, _p1Difficulty, _p1Depth, _p2Difficulty, _p2Depth));
 		_game->enableDebugPrintout(true);
 	}
 	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
@@ -218,34 +226,38 @@ void Menu::setupOptionsMenu()
 	centerX(_optionsSpriteTitle);
 
 	// All options sprite
-	areaToDisplay = sf::IntRect({ 0, 81 }, { 202, 117 });
+	areaToDisplay = sf::IntRect({ 0, 80 }, { 194, 83 });
 	_mainOptionsSprite = sf::Sprite(_MenuTextures, areaToDisplay);
 	sf::Vector2<int> positionOffset = { 26, 60 };
 	_mainOptionsSprite.setPosition(positionOffset.x, positionOffset.y);
 
-
+	// P2Color
+	areaToDisplay = sf::IntRect({ 114, 238 }, { 140, 20 });
+	_p2ColorSprite = sf::Sprite(_MenuTextures, areaToDisplay);
+	_p2ColorSprite.setPosition(positionOffset.x + 0, positionOffset.y + 105);
+	
 
 	// Difficulty levels
 
 	// Randomness
 	areaToDisplay = sf::IntRect({ 0, 20 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
-	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
 	// MiniMax
 	areaToDisplay = sf::IntRect({ 0, 40 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
-	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
 	// Alpha Beta
 	areaToDisplay = sf::IntRect({ 0, 60 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
-	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
 
 	// MCTS
 	areaToDisplay = sf::IntRect({ 114, 60 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
-	_difficultyLevels.back().setPosition(positionOffset.x + 17, positionOffset.y + 97);
+
+	// Player
+	areaToDisplay = sf::IntRect({ 0, 238 }, { 114, 20 });
+	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
 
 	setOptionsMenuButtons();
 }
@@ -256,19 +268,33 @@ void Menu::displayOptionsMenu()
 
 	_gfx.draw(_optionsSpriteTitle);
 	_gfx.draw(_mainOptionsSprite);
-	_gfx.draw(_difficultyLevels[_difficulty]);
 
-	// Player color
-	_gfx.draw(_playerPieces[_playerColor]);
-	_gfx.draw(_opponentPieces[_opponentColor]);
+	// Difficulties
+	_difficultyLevels[_p1Difficulty].setPosition(_mainOptionsSprite.getPosition() + sf::Vector2f(46, 21));
+	_gfx.draw(_difficultyLevels[_p1Difficulty]);
 
-	// Minimax or AlphaBeta or MCTS
-	if (_difficulty == 1 || _difficulty == 2 || _difficulty == 3)
+	_difficultyLevels[_p2Difficulty].setPosition(_mainOptionsSprite.getPosition() + sf::Vector2f(46, 63));
+	_gfx.draw(_difficultyLevels[_p2Difficulty]);
+
+	_gfx.draw(_p2ColorSprite);
+	// Player 2 color
+	_gfx.draw(_colorPickPieces[_p2Color]);
+
+	// Algorithm for player 1
+	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3)
 	{
 		sf::Vector2<int> optionsPositionOffset = { 26, 60 };
-		sf::Vector2<int> positionOffset = { optionsPositionOffset.x + 12 + 47, optionsPositionOffset.y + 97 + 21 };
+		sf::Vector2<int> positionOffset = { optionsPositionOffset.x + 91, optionsPositionOffset.y + 42 };
 
-		drawNumber(_gfx, 2, _depth, positionOffset);
+		drawNumber(_gfx, 2, _p1Depth, positionOffset);
+	}
+	// Algorithm for player 2
+	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3)
+	{
+		sf::Vector2<int> optionsPositionOffset = { 26, 60 };
+		sf::Vector2<int> positionOffset = { optionsPositionOffset.x + 91, optionsPositionOffset.y + 42 + 42 };
+
+		drawNumber(_gfx, 2, _p2Depth, positionOffset);
 	}
 
 	drawButtons(_optionsMenuButtons);
@@ -280,83 +306,100 @@ void Menu::setOptionsMenuButtons()
 	sf::Vector2<int> positionOffset = { 26, 60 };
 	sf::Vector2<int> position;
 
-
-	// Player Color
-	{
-		// PlayerColor left arrow 
-		Button playerColorLeftArrow(Button::Purpose::PlayerColorLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 148, 3 };
-		playerColorLeftArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(playerColorLeftArrow);
-
-		// PlayerColor right arrow 
-		Button playerColorRightArrow(Button::Purpose::PlayerColorRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 187, 3 };
-		playerColorRightArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(playerColorRightArrow);
-	}
-
-	// Opponent Color
-	{
-		// OpponentColor left arrow 
-		Button opponentColorLeftArrow(Button::Purpose::OpponentColorLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 148, 26 };
-		opponentColorLeftArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(opponentColorLeftArrow);
-
-		// OpponentColor right arrow 
-		Button opponentColorRightArrow(Button::Purpose::OpponentColorRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 187, 26 };
-		opponentColorRightArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(opponentColorRightArrow);
-	}
-
 	// Tournament mode On/Off
 	{
 		// Tournament mode On
 		Button tournamentModeOn(Button::Purpose::TournamentModeOn, { 170, 0 }, { 37, 20 }, _MenuTextures);
-		position = { 157, 49 };
+		position = { 157, 0 };
 		tournamentModeOn.setPosition(position + positionOffset);
 		tournamentModeOn.setActive(false);
 		_optionsMenuButtons.push_back(tournamentModeOn);
 
 		// Tournament mode Off
 		Button tournamentModeOff(Button::Purpose::TournamentModeOff, { 207, 0 }, { 37, 20 }, _MenuTextures);
-		position = { 157, 49 };
+		position = { 157, 0 };
 		tournamentModeOff.setPosition(position + positionOffset);
 		_optionsMenuButtons.push_back(tournamentModeOff);
 	}
 
-	// Difficulty
+	// Player 1 Mode
 	{
-		// Difficulty left arrow
-		Button difficultyLeftArrow(Button::Purpose::DifficultyLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 0, 100 };
-		difficultyLeftArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(difficultyLeftArrow);
+		// PlayerMode left arrow 
+		Button playerColorLeftArrow(Button::Purpose::Player1ModeLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 29, 24 };
+		playerColorLeftArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(playerColorLeftArrow);
 
-		// Difficulty right arrow
-		Button difficultyRightArrow(Button::Purpose::DifficultyRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 133, 100 };
-		difficultyRightArrow.setPosition(position + positionOffset);
-		_optionsMenuButtons.push_back(difficultyRightArrow);
+		// PlayerMode right arrow 
+		Button playerColorRightArrow(Button::Purpose::Player1ModeRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 162, 24 };
+		playerColorRightArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(playerColorRightArrow);
 	}
 
-	// Difficulty - DepthShift
+	// Player 2 Mode
 	{
-		// Difficulty - Muscle Head left arrow
-		Button difficultyMuscleHeadLeftArrow(Button::Purpose::DepthShiftLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 12 + 31, 97 + 24 };
-		difficultyMuscleHeadLeftArrow.setPosition(position + positionOffset);
-		difficultyMuscleHeadLeftArrow.setActive(false);
-		_optionsMenuButtons.push_back(difficultyMuscleHeadLeftArrow);
+		// PlayerMode left arrow 
+		Button playerColorLeftArrow(Button::Purpose::Player2ModeLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 29, 66 };
+		playerColorLeftArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(playerColorLeftArrow);
 
-		// Difficulty - Muscle Head right arrow
-		Button difficultyMuscleHeadRightArrow(Button::Purpose::DepthShiftRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
-		position = { 23 + 65, 97 + 24 };
-		difficultyMuscleHeadRightArrow.setPosition(position + positionOffset);
-		difficultyMuscleHeadRightArrow.setActive(false);
-		_optionsMenuButtons.push_back(difficultyMuscleHeadRightArrow);
+		// PlayerMode right arrow 
+		Button playerColorRightArrow(Button::Purpose::Player2ModeRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 162, 66 };
+		playerColorRightArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(playerColorRightArrow);
+	}
+
+	// Player 2 Color
+	{
+		// Player 2 Color left arrow 
+		Button opponentColorLeftArrow(Button::Purpose::Player2ColorLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 86, 108 };
+		opponentColorLeftArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(opponentColorLeftArrow);
+
+		// Player 2 Color right arrow 
+		Button opponentColorRightArrow(Button::Purpose::Player2ColorRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 86 + 39, 108 };
+		opponentColorRightArrow.setPosition(position + positionOffset);
+		_optionsMenuButtons.push_back(opponentColorRightArrow);
+	}
+
+
+	// Player 1 Difficulty - DepthShift
+	{
+		// Difficulty
+		Button p1DifficultyDepthLeftArrow(Button::Purpose::P1DepthShiftLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 74, 45 };
+		p1DifficultyDepthLeftArrow.setPosition(position + positionOffset);
+		p1DifficultyDepthLeftArrow.setActive(false);
+		_optionsMenuButtons.push_back(p1DifficultyDepthLeftArrow);
+
+		// Difficulty
+		Button p1DifficultyDepthRightArrow(Button::Purpose::P1DepthShiftRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 75 + 46, 45 };
+		p1DifficultyDepthRightArrow.setPosition(position + positionOffset);
+		p1DifficultyDepthRightArrow.setActive(false);
+		_optionsMenuButtons.push_back(p1DifficultyDepthRightArrow);
+	}
+
+	// Player 2 Difficulty - DepthShift
+	{
+		// Difficulty
+		Button p2DifficultyDepthLeftArrow(Button::Purpose::P2DepthShiftLeftArrow, { 114, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 74, 46 + 41 };
+		p2DifficultyDepthLeftArrow.setPosition(position + positionOffset);
+		p2DifficultyDepthLeftArrow.setActive(false);
+		_optionsMenuButtons.push_back(p2DifficultyDepthLeftArrow);
+
+		// Difficulty
+		Button p2DifficultyDepthRightArrow(Button::Purpose::P2DepthShiftRightArrow, { 129, 40 }, { 15, 15 }, _MenuTextures);
+		position = { 75 + 46, 46 + 41 };
+		p2DifficultyDepthRightArrow.setPosition(position + positionOffset);
+		p2DifficultyDepthRightArrow.setActive(false);
+		_optionsMenuButtons.push_back(p2DifficultyDepthRightArrow);
 	}
 
 	// Back
@@ -375,22 +418,6 @@ void Menu::optionsMenuButtonCheck()
 		{
 			switch (button.getPurpose())
 			{
-			case Menu::Button::Purpose::PlayerColorLeftArrow:
-				playerColorShift(-1);
-				return;
-			case Menu::Button::Purpose::PlayerColorRightArrow:
-				playerColorShift(1);
-				return;
-
-
-			case Menu::Button::Purpose::OpponentColorLeftArrow:
-				opponentColorShift(-1);
-				return;
-			case Menu::Button::Purpose::OpponentColorRightArrow:
-				opponentColorShift(1);
-				return;
-
-
 			case Menu::Button::Purpose::TournamentModeOn:
 				_tournamentModeOn = false; // It is the opposite because we see that it is on and want to turn it off
 				getButton(Button::Purpose::TournamentModeOff, _optionsMenuButtons)->setActive(true);
@@ -403,19 +430,48 @@ void Menu::optionsMenuButtonCheck()
 				return;
 
 
-			case Menu::Button::Purpose::DifficultyLeftArrow:
-				difficultyShift(-1);
+
+			case Menu::Button::Purpose::Player1ModeLeftArrow:
+				player1ModeShift(-1);
 				return;
-			case Menu::Button::Purpose::DifficultyRightArrow:
-				difficultyShift(1);
+			case Menu::Button::Purpose::Player1ModeRightArrow:
+				player1ModeShift(1);
 				return;
 
-			case Menu::Button::Purpose::DepthShiftLeftArrow:
-				depthShift(-1);
+			case Menu::Button::Purpose::Player2ModeLeftArrow:
+				player2ModeShift(-1);
 				return;
-			case Menu::Button::Purpose::DepthShiftRightArrow:
-				depthShift(1);
+			case Menu::Button::Purpose::Player2ModeRightArrow:
+				player2ModeShift(1);
 				return;
+
+
+
+			case Menu::Button::Purpose::Player2ColorLeftArrow:
+				player2ColorShift(-1);
+				return;
+			case Menu::Button::Purpose::Player2ColorRightArrow:
+				player2ColorShift(1);
+				return;
+
+
+
+			case Menu::Button::Purpose::P1DepthShiftLeftArrow:
+				player1DepthShift(-1);
+				return;
+			case Menu::Button::Purpose::P1DepthShiftRightArrow:
+				player1DepthShift(1);
+				return;
+
+			case Menu::Button::Purpose::P2DepthShiftLeftArrow:
+				player2DepthShift(-1);
+				return;
+			case Menu::Button::Purpose::P2DepthShiftRightArrow:
+				player2DepthShift(1);
+				return;
+
+
+
 			case Button::Purpose::Back:
 				_currentState = State::Main;
 				return;
@@ -536,6 +592,7 @@ void Menu::replaysMenuButtonCheck()
 			switch (button.getPurpose())
 			{
 			case Menu::Button::Purpose::PreviousGame:
+				buttonDebug("Previous Game\n");
 				if (_gameLogIndex == 0)
 					_gameLogIndex = _gameLogs->getLogs().size() - 1;
 				else
@@ -545,6 +602,7 @@ void Menu::replaysMenuButtonCheck()
 				setReplayBoard();
 				return;
 			case Menu::Button::Purpose::NextGame:
+				buttonDebug("Next Game\n");
 				if (_gameLogIndex == _gameLogs->getLogs().size() - 1)
 					_gameLogIndex = 0;
 				else
@@ -555,33 +613,36 @@ void Menu::replaysMenuButtonCheck()
 				return;
 
 			case Menu::Button::Purpose::BackOneMove:
+				buttonDebug("Step Backward Once\n");
 				replayStepBackwardsOnce();
-				std::cout << "Step Backward Once\n";
 				return;
 			case Menu::Button::Purpose::ForwardOneMove:
+				buttonDebug("Step Forward Once\n");
 				replayStepForwardsOnce();
-				std::cout << "Step Forward Once\n";
 				return;
-			case Menu::Button::Purpose::JumpBackFiveMoves:
+			case Menu::Button::Purpose::JumpBackFiveMoves:				
+				buttonDebug("Step Back Five Times\n");
 				for (size_t i = 0; i < 5; i++)
 					replayStepBackwardsOnce();
 				return;
 			case Menu::Button::Purpose::JumpForwardFiveMoves:
+				buttonDebug("Step Forward Five Times\n");
 				for (size_t i = 0; i < 5; i++)
 					replayStepForwardsOnce();
 				return;
 
 			case Menu::Button::Purpose::PauseReplay:
+				buttonDebug("Pause Replay\n");
 				_replaysIsPaused = true;
-				std::cout << "Pause Replay\n";
 				return;
 			case Menu::Button::Purpose::PlayReplay:
+				buttonDebug("Play Replay\n");
 				_replaysIsPaused = false;
-				std::cout << "Play Replay\n";
 				return;
 
 
 			case Button::Purpose::ReturnToMain:
+				buttonDebug("Return To Main\n");
 				exitReplays();
 				return;
 			default:
@@ -670,22 +731,15 @@ void Menu::setupMiscSprites()
 	}
 
 	// Pieces to display player colors in the options menu
-	for (int j = 0; j < 2; j++)
+	positionOffset = { optionsPositionOffset.x + 106, optionsPositionOffset.y + 108};
+	areaToDisplay = sf::IntRect({ 211, 40 }, { 14, 14 });
+	for (size_t i = 0; i < 3; i++)
 	{
-		positionOffset = { optionsPositionOffset.x + 168, optionsPositionOffset.y + 3 + 23 * j };
-
-		areaToDisplay = sf::IntRect({ 211, 40 }, { 14, 14 });
-		for (size_t i = 0; i < 3; i++)
-		{
-			if (i != 0)
-				areaToDisplay.left += 14; // Position in row
-			sf::Sprite piece(_MenuTextures, areaToDisplay);
-			piece.setPosition(positionOffset.x, positionOffset.y);
-			if (j == 0)
-				_playerPieces.push_back(piece);
-			else
-				_opponentPieces.push_back(piece);
-		}
+		if (i != 0)
+			areaToDisplay.left += 14; // Position in row
+		sf::Sprite piece(_MenuTextures, areaToDisplay);
+		piece.setPosition(positionOffset.x, positionOffset.y);
+			_colorPickPieces.push_back(piece);
 	}
 }
 void Menu::centerX(sf::Sprite& sprite)
@@ -698,78 +752,89 @@ void Menu::centerY(sf::Sprite& sprite)
 }
 
 // Options menu functionality
+void Menu::player1ModeShift(int shift)
+{
+	_p1Difficulty += shift;
+	if (_p1Difficulty >= _difficultyCount)
+		_p1Difficulty = 0;
+	if (_p1Difficulty < 0)
+		_p1Difficulty = _difficultyCount - 1;
+
+	// Cannot support 2 players
+	if (_p1Difficulty == 4 && _p2Difficulty == 4)
+		player2ModeShift(1);
+
+	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3) // DepthShift
+	{
+		getButton(Button::Purpose::P1DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
+		getButton(Button::Purpose::P1DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
+	}
+	else
+	{
+		getButton(Button::Purpose::P1DepthShiftLeftArrow, _optionsMenuButtons)->setActive(false);
+		getButton(Button::Purpose::P1DepthShiftRightArrow, _optionsMenuButtons)->setActive(false);
+	}		
+}
+void Menu::player2ModeShift(int shift)
+{
+	_p2Difficulty += shift;
+	if (_p2Difficulty >= _difficultyCount)
+		_p2Difficulty = 0;
+	if (_p2Difficulty < 0)
+		_p2Difficulty = _difficultyCount - 1;
+
+	// Cannot support 2 players
+	if (_p2Difficulty == 4 && _p1Difficulty == 4)
+		player1ModeShift(1);
+
+	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3) // DepthShift
+	{
+		getButton(Button::Purpose::P2DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
+		getButton(Button::Purpose::P2DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
+	}
+	else
+	{
+		getButton(Button::Purpose::P2DepthShiftLeftArrow, _optionsMenuButtons)->setActive(false);
+		getButton(Button::Purpose::P2DepthShiftRightArrow, _optionsMenuButtons)->setActive(false);
+	}
+}
+void Menu::player2ColorShift(int shift)
+{
+	_p2Color += shift;
+	if (_p2Color > 2)
+		_p2Color = 1;
+	if (_p2Color < 1)
+		_p2Color = 2;
+}
+void Menu::player1DepthShift(int shift)
+{
+	_p1Depth += shift;
+	if (_p1Depth > 99)
+		_p1Depth = 1;
+	if (_p1Depth < 1)
+		_p1Depth = 99;
+}
+void Menu::player2DepthShift(int shift)
+{
+	_p2Depth += shift;
+	if (_p2Depth > 99)
+		_p2Depth = 1;
+	if (_p2Depth < 1)
+		_p2Depth = 99;
+}
+
 Game::PlayerColor Menu::getPlayer1Color()
 {
-	if (_cPU_PlayerGame)
-		return Game::PlayerColor::CPU_playerGame;
-	if (_playerColor == 0) // Red
-		return Game::PlayerColor::Red;
-	else if (_playerColor == 1)
-		return Game::PlayerColor::Black;
-	else
-		return Game::PlayerColor::White;
+	return Game::PlayerColor::Red;
 }
 Game::PlayerColor Menu::getPlayer2Color()
 {
-	if (_playerColor == 1 || _opponentColor == 1) // Black
+	if (_p2Color == 1) // Black
 		return Game::PlayerColor::Black;
-	else if (_playerColor == 2 || _opponentColor == 2) // White
+	else // White
 		return Game::PlayerColor::White;
 }
 
-void Menu::playerColorShift(int shift)
-{
-	_playerColor += shift;
-	if (_playerColor > 2)
-		_playerColor = 0;
-	if (_playerColor < 0)
-		_playerColor = 2;
-
-	if (_playerColor == 0 && _opponentColor == 0) // Both red
-		_opponentColor = 1; // Black
-	if (_playerColor > 0 && _opponentColor > 0) // Both black or white
-		_opponentColor = 0; // Red
-}
-void Menu::opponentColorShift(int shift)
-{
-	_opponentColor += shift;
-	if (_opponentColor > 2)
-		_opponentColor = 0;
-	if (_opponentColor < 0)
-		_opponentColor = 2;
-
-	if (_opponentColor == 0 && _playerColor == 0) // Both red
-		_playerColor = 1; // Black
-	if (_opponentColor > 0 && _playerColor > 0) // Both black or white
-		_playerColor = 0; // Red
-}
-void Menu::difficultyShift(int shift)
-{
-	_difficulty += shift;
-	if (_difficulty >= _difficultyCount)
-		_difficulty = 0;
-	if (_difficulty < 0)
-		_difficulty = _difficultyCount - 1;
-
-	if (_difficulty == 1 || _difficulty == 2 || _difficulty == 3) // DepthShift
-	{
-		getButton(Button::Purpose::DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
-		getButton(Button::Purpose::DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
-	}
-	else
-	{
-		getButton(Button::Purpose::DepthShiftLeftArrow, _optionsMenuButtons)->setActive(false);
-		getButton(Button::Purpose::DepthShiftRightArrow, _optionsMenuButtons)->setActive(false);
-	}
-}
-void Menu::depthShift(int shift)
-{
-	_depth += shift;
-	if (_depth > 99)
-		_depth = 1;
-	if (_depth < 1)
-		_depth = 99;
-}
 
 // Replays menu functionality
 void Menu::prepReplayMenu()
