@@ -45,9 +45,20 @@ Menu::~Menu()
 
 void Menu::run()
 {
+	// Prevents jumping straight into a game from the menu when undesired
+	bool aGameHasRun = false;
+
 	_gfx.setFramerateLimit(30);
 	while (_gfx.isOpen())
 	{
+		if (aGameHasRun && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
+		{
+			std::cout << "\n\nAuto starting next Game\n\n";
+			_currentState = State::Play;
+		}
+
+
+
 		_mouseButtonPressed = false;
 		sf::Event event;
 		while (_gfx.pollEvent(event))
@@ -79,6 +90,7 @@ void Menu::run()
 			break;
 		case Menu::State::Play:
 			// Pass the bool to game
+			aGameHasRun = true;
 			runGame();
 			break;
 		case Menu::State::Quit: // Quit
@@ -156,12 +168,19 @@ void Menu::runGame()
 
 		// Set up game
 		_game = std::move(std::make_unique<Game>(_gfx, getPlayer2Color(), _tournamentModeOn, _p1Difficulty, _p1Depth, _p2Difficulty, _p2Depth));
-		_game->enableDebugPrintout(true);
+		_game->enableDebugPrintout(false);
 	}
 	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
 	{
 		_currentState = State::Main;
 		_game = nullptr;	
+		if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+		{
+			if (Game::getFileMappingVars()._mappedViewOfFile->isTraining())
+			{
+				_menuWaitTimerStart = std::chrono::steady_clock::now();
+			}
+		}
 	}
 }
 
@@ -999,7 +1018,16 @@ bool Menu::createMappedFile()
 	MoveMemory(Game::getFileMappingVars()._mappedViewOfFile, checkersIPC, Game::getFileMappingVars()._szIPC);
 
 	Game::getFileMappingVars()._mappedViewOfFile->setGameOnOff(true);
-	Game::getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(true);
+
+	// Do we want to train?
+	bool doTraining = true;
+	if (doTraining)
+	{
+		std::cout << "Training -> ON.\n";
+		Game::getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(doTraining);
+	}
+	else
+		std::cout << "Training -> OFF.\n";
 
 	return retBool;
 }

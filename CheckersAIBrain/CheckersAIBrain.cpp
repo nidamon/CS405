@@ -8,7 +8,7 @@
 #include <string>
 #include "out/build/CheckersIPC.h"
 
-#define DEBUG_PRINTOUT_CHECKERSBRAIN
+//#define DEBUG_PRINTOUT_CHECKERSBRAIN
 
 void DebugTextOut(std::string debugText)
 {
@@ -267,7 +267,7 @@ FileMappingVars& getFileMappingVars()
 // Main
 int main()
 {
-	bool doDebugPrintOut = true;
+	bool doDebugPrintOut = false;
 
 	while (!openMappedFile())
 	{
@@ -298,29 +298,28 @@ int main()
 			std::cout << "It says training\n";
 		else
 			std::cout << "It DOES NOT say training\n";
-
 	}
 
 	int session = 0;
 	int save = 0;
 	int iterationCount = 0;
-	int checkPointNum = 100;
+	int checkPointNum = 5000;
 	NeuralNet net(64, 44, 1);
 
-	//// Load the last network to continue previous learning
-	//if (!loadLatestNetwork(net, session, save))
-	//{
-	//	std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
-	//	return 0;
-	//}
-	//// Increment session
-	//session += 1;
-	//save = 0; // New session, so new save count
+	// Load the last network to continue previous learning
+	if (!loadLatestNetwork(net, session, save))
+	{
+		std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
+		return 0;
+	}
+	// Increment session
+	session += 1;
+	save = 0; // New session, so new save count
 
 	std::vector<BoardVectAndClass> boards;
 
 	float learningRate = 0.001f;
-	auto criterion = torch::nn::CrossEntropyLoss();
+	auto criterion = torch::nn::HingeEmbeddingLoss();
 	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
 
 	// Network stuff in here
@@ -366,14 +365,10 @@ int main()
 		if (getFileMappingVars()._mappedViewOfFile != nullptr)
 			turn = getFileMappingVars()._mappedViewOfFile->_turn;
 		addBoardsValues(data, a._board, b._board, turn);
-
-		std::cout << "here... boardSelection\n";
-
+		
 		at::Tensor output;
 		if (isTraining)
 		{
-			std::cout << "begin: isTraining;\n";
-
 			std::vector<float> preference{ 0.0f };
 			if (a._boardClassification > b._boardClassification)
 				preference.front() = 1.0f;
@@ -386,33 +381,14 @@ int main()
 
 			// Forward
 			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
-			output = net(x);
-			std::cout << "begin: auto loss = criterion(output, target);\n";
-
-
-
-
-
-
-
-
-
+			output = net(x);			
 			auto loss = criterion(output, target); // This here
-
-
-
-
-
-
-
+			
 			// Backward
-			std::cout << "begin: optimizer.zero_grad();\n";
 			optimizer.zero_grad();
-			std::cout << "begin: loss.backward();\n";
 			loss.backward();
 
 			// Gradient descent or adam step
-			std::cout << "begin: optimizer.step();\n";
 			optimizer.step();
 
 
@@ -429,12 +405,9 @@ int main()
 			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
 			output = net(x);
 		}
-
-		std::cout << "after... boardSelection\n";
-
+		
 		// Result
 		auto value = output.item().toFloat();
-		std::cout << "NetworkVal: " << value << "\n";
 		if (value > 0.0f)
 		{
 			return a;

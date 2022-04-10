@@ -24,15 +24,10 @@ struct NeuralNetImpl : torch::nn::Module
         register_module("out", out);
 
     }
-    torch::Tensor forward(torch::Tensor x) {
-        std::cout << "forward start" << "\n";
-        //std::cout << x << "\n";
+    torch::Tensor forward(torch::Tensor x) {  
         x = torch::leaky_relu(hidden1(x));
-        //std::cout << x << "\n";
         x = torch::tanh(hidden2(x));
-        //std::cout << x << "\n";
         x = torch::selu(out(x));
-        std::cout << "forward end" << "\n";
         return x;
     }
 

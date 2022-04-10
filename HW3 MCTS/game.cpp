@@ -793,7 +793,7 @@ void Game::conductMoves(DWORD sleepTime)
 
             if(_isTesting)
                 drawSelf();
-            if(sleepTime > 0)
+            if(sleepTime > 0 && !_isNN_Training)
                 Sleep(sleepTime);
             switch (_difficulty)
             {
@@ -827,7 +827,7 @@ void Game::conductMoves(DWORD sleepTime)
 
 
             drawSelf();
-            if (sleepTime > 0)
+            if (sleepTime > 0 && !_isNN_Training)
                 Sleep(sleepTime);
         }        
     }
@@ -1633,7 +1633,7 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
                 return miniMax(board, (turn + 1) % 2, turn % 2, depthOfSearch, additionalJumps, bias);
             };
             
-            int searchDepth = 3;
+            int searchDepth = 4;
             float bias = 0.0f;
 
             // Sort and rank boards
