@@ -56,7 +56,11 @@ void Menu::run()
 				_mouseButtonPressed = true;
 
 			if (event.type == sf::Event::Closed)
+			{
+				if (Game::getFileMappingVars()._hFileMap != NULL)
+					unMapFile();
 				_gfx.close();
+			}
 		}
 
 		switch (_currentState)
@@ -78,6 +82,8 @@ void Menu::run()
 			runGame();
 			break;
 		case Menu::State::Quit: // Quit
+			if (Game::getFileMappingVars()._hFileMap != NULL)
+				unMapFile();
 		default:
 			_gfx.close();
 		}
@@ -127,6 +133,28 @@ void Menu::runGame()
 	// Game running code here
 	if (_game == nullptr) // Create a new game
 	{
+		// Inter proccess communications check
+		if (_p1Difficulty == 5 || _p2Difficulty == 5)
+		{
+			if (Game::getFileMappingVars()._hFileMap == NULL)
+			{
+				std::cout << "Error: File Map not set.\n";
+				_currentState = State::Main;
+				return;
+			}
+			else if (Game::getFileMappingVars()._mappedViewOfFile->isBrainOn() == false)
+			{
+				std::cout << "Error: No brain found. Run CheckersAIBrain.\n";
+				_currentState = State::Main;
+				return;
+			}
+			else
+			{
+				std::cout << "Starting up Neural Net game.\n";
+			}
+		}
+
+		// Set up game
 		_game = std::move(std::make_unique<Game>(_gfx, getPlayer2Color(), _tournamentModeOn, _p1Difficulty, _p1Depth, _p2Difficulty, _p2Depth));
 		_game->enableDebugPrintout(true);
 	}
@@ -257,6 +285,10 @@ void Menu::setupOptionsMenu()
 
 	// Player
 	areaToDisplay = sf::IntRect({ 0, 238 }, { 114, 20 });
+	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
+
+	// Neural Net
+	areaToDisplay = sf::IntRect({ 0, 258 }, { 114, 20 });
 	_difficultyLevels.push_back(sf::Sprite(_MenuTextures, areaToDisplay));
 
 	setOptionsMenuButtons();
@@ -473,6 +505,19 @@ void Menu::optionsMenuButtonCheck()
 
 
 			case Button::Purpose::Back:
+				// Create the file mapping for the Neural Network
+				if (_p1Difficulty == 5 || _p2Difficulty == 5)
+				{
+					if (Game::getFileMappingVars()._hFileMap == NULL)
+						createMappedFile();
+					std::cout << "Start CheckersAIBrain before clicking play.\n";
+				}
+				else
+				{
+					if (Game::getFileMappingVars()._hFileMap != NULL)
+						unMapFile();
+				}
+
 				_currentState = State::Main;
 				return;
 			default:
@@ -903,7 +948,99 @@ void Menu::exitReplays()
 	_currentState = State::Main;
 }
 
+// Options menu Neural Network fileMapping
+bool Menu::createMappedFile()
+{
+	bool retBool = true;
 
+	std::cout << "\t\t....Mapping File (Opening)...." << std::endl;
+	std::cout << std::endl;
+
+	CheckersIPC checkersIPC[1];
+
+	// Create File Map
+	Game::getFileMappingVars()._hFileMap = 
+		 CreateFileMapping(
+			INVALID_HANDLE_VALUE,
+			NULL,
+			PAGE_READWRITE,
+			0,
+			 Game::getFileMappingVars()._szIPC,
+			TEXT("Local\\CheckersFileMap")
+		);
+
+	if (Game::getFileMappingVars()._hFileMap == FALSE)
+	{
+		std::cout << "CreateFileMapping Failed & Error NO - " << GetLastError() << std::endl;
+		retBool = false;
+	}
+	else
+	{
+		std::cout << "CreateFileMapping Success" << std::endl;
+
+		// MapViewOfFile
+		Game::getFileMappingVars()._mappedViewOfFile = (CheckersIPC*)MapViewOfFile(
+			Game::getFileMappingVars()._hFileMap,
+			FILE_MAP_ALL_ACCESS,
+			0,
+			0,
+			Game::getFileMappingVars()._szIPC);
+
+		if (Game::getFileMappingVars()._mappedViewOfFile == NULL)
+		{
+			std::cout << "MapViewOfFile Failed & Error NO - " << GetLastError() << std::endl;
+			retBool = false;
+		}
+		else
+			std::cout << "MapViewOfFile Success" << std::endl;
+	}
+
+	// Copy Memory Function
+	MoveMemory(Game::getFileMappingVars()._mappedViewOfFile, checkersIPC, Game::getFileMappingVars()._szIPC);
+
+	Game::getFileMappingVars()._mappedViewOfFile->setGameOnOff(true);
+	Game::getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(true);
+
+	return retBool;
+}
+bool Menu::unMapFile()
+{
+	bool retBool = true;
+
+	std::cout << "\t\t....UnMapping File (Closing)...." << std::endl;
+	std::cout << std::endl;
+
+	Game::getFileMappingVars()._mappedViewOfFile->setBrainOnOff(false);
+	Game::getFileMappingVars()._mappedViewOfFile->setGameOnOff(false);
+	
+	// Wait for brain to turn off to prevent access violations
+	std::cout << "Waiting for brain to turn off";
+	while (Game::getFileMappingVars()._mappedViewOfFile->isBrainOn())
+	{
+		Sleep(0050);
+		std::cout << ".";
+	}
+	std::cout << "\n";
+
+
+	// UnMapViewOfFile
+	Game::getFileMappingVars()._bResultOfMapping = UnmapViewOfFile(Game::getFileMappingVars()._mappedViewOfFile);
+	if (Game::getFileMappingVars()._bResultOfMapping == FALSE)
+	{
+		std::cout << "UnMapViewOfFile Failed & Error No - " << GetLastError() << std::endl;
+		retBool = false;
+	}
+	else
+		std::cout << "UnMapViewOfFile Success" << std::endl;
+
+
+	// Close Handle
+	CloseHandle(Game::getFileMappingVars()._hFileMap);
+
+	Game::getFileMappingVars()._hFileMap = NULL;
+
+	return retBool;
+}
 
 // ####################################################################
 // Menu::Button

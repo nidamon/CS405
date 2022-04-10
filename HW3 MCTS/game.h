@@ -9,6 +9,7 @@ This is the header file for the game class that will handle the game.
 #define GAME_H
 
 #include "gameLogs.h"
+#include "CheckersIPC.h"
 
 class Game
 {
@@ -59,8 +60,9 @@ private:
 
 	// returns difference of piece values with respect to teamTurn
 	static float boardEvaluate(const std::vector<PieceType> tiles, int teamTurn);
+	static float biasedBoardEvaluate(const std::vector<PieceType> tiles, int teamTurn, float bias);
 	// Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-	float miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps);
+	float miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float biasForEvaluation);
 	// Recursively makes boards and evaluates them with alpha beta cutoff. Returns the minimum and maximum boardEvaluations made
 	float alphaBeta(Board& board, const int turn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float& a, float& b);
 
@@ -224,6 +226,21 @@ public:
 		{
 			_MCTS_nodeCount = 0;
 		}
+
+		std::string movesStr()
+		{
+			auto movesCopy = _movesMade;
+			std::stringstream strStream;
+			auto size = _movesMade.size();
+			for (size_t i = 0; i < size; i++)
+			{
+				if (i != 0)
+					strStream << ", ";
+				strStream << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+				movesCopy.pop();
+			}
+			return strStream.str();
+		}
 	private:
 		void getFullJumpSet(std::vector<sf::Vector3<int>>& possibleGeneratedMovesIN, std::vector<std::queue<sf::Vector3<int>>> &movesOUT, 
 							std::queue<sf::Vector3<int>>& currentMoveSequence, Board& board, int& teamTurn)
@@ -309,6 +326,15 @@ private:
 
 	sf::Vector3<int> mCTSCall();
 
+	sf::Vector3<int> neuralNetworkCall(bool doPrintout);
+	struct BoardAndMoves {
+		Board _board;
+		std::queue<sf::Vector3<int>> _moveSequence;
+		float _evaluation = 0.0f;
+		BoardClassification _classification = BoardClassification::NotAvailable;
+	};
+	std::queue<sf::Vector3<int>> brainCall(const std::vector<sf::Vector3<int>>& possibleMoves, int team, bool doPrintout);
+
 	// Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
 	void alphaBetaMiniMaxCompare(bool doPrintout);
 	// Sets the search depth of miniMaxCall() and alphaBetaCall()
@@ -320,8 +346,11 @@ private:
 	void makeMiniMaxMove(bool doPrintout);
 	// Uses alphaBeta function to pick a move
 	void makeAlphaBetaMove(bool doPrintout);
-	// Uses  the Monte Carlo Tree Search algorithm to pick a move
+	// Uses the Monte Carlo Tree Search algorithm to pick a move
 	void makeMCTS_Move();
+	// Uses a Neural Network to pick a move
+	void makeNN_Move();
+
 	void finalizeMove();
 
 	void loadAdditionalJumps();
@@ -334,6 +363,14 @@ private:
 
 public:
 	static std::vector<std::vector<PieceType>>& getTournamentBoards();
+
+	struct FileMappingVars {
+		HANDLE _hFileMap;
+		BOOL _bResultOfMapping;
+		CheckersIPC* _mappedViewOfFile;
+		size_t _szIPC;
+	};
+	static FileMappingVars& getFileMappingVars();
 
 private:
     // Generates the 216 starting tournament boards
@@ -365,13 +402,19 @@ private:
 	int _lastTurnMCTS_wasCalled = 0;
 	std::unique_ptr<MCTS_Node> _mCTS_RootNode = nullptr;
 	float _timeAvailableInSeconds = 1.0f;
-	// MCTS moves
-	std::queue<sf::Vector3<int>> _mCTS_Moves;
+	// Queued moves
+	std::queue<sf::Vector3<int>> _queuedMoves;
+
+	// File Mapping
+	static FileMappingVars _fileMappingVars;
+
+	// Neural Network training
+	bool _isNN_Training = true;
 
 	// Testing
 	bool _isTesting = false;
 	int _testCount = 0;
-	bool _doDebugPrintout = true;
+	bool _doDebugPrintout = false;
 
 	static int _miniMaxCalls;
 	static int _alphaBetaCalls;

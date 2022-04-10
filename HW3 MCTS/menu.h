@@ -10,7 +10,7 @@ This is the header file for the menu class which handles the menus.
 
 #include "game.h"
 
-#define MENUBUTTONDEBUG
+//#define MENUBUTTONDEBUG
 
 class Menu
 {
@@ -148,6 +148,11 @@ private:
 	void replayStepBackwardsOnce();
 	void setReplayBoard();
 	void exitReplays();
+
+	// Options menu Neural Network fileMapping
+	bool createMappedFile();
+	bool unMapFile();
+
 private:
 
 	bool _mouseButtonPressed = false;
@@ -168,13 +173,13 @@ private:
 	bool _cPU_PlayerGame = false;
 	
 	bool _tournamentModeOn = false;
-	int _p1Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player
+	int _p1Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player, 5=NeuralNet
 	int _p1Depth = 1; 
-	int _p2Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player
+	int _p2Difficulty = 0; // 0=Random, 1=MiniMax, 2=AlphaBeta, 3=MCTS, 4=Player, 5=NeuralNet
 	int _p2Depth = 1; 
 	
 	int _p2Color = 1; // 1=Black, 2=White
-	const int _difficultyCount = 5; 
+	const int _difficultyCount = 6; 
 
 
 	// Replays menu

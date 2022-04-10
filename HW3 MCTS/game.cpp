@@ -237,6 +237,8 @@ int Game::_evaluationCalls = 0;
 sf::Texture Game::_winTexture;
 sf::Sprite Game::_winSprite;
 
+// File Mapping
+Game::FileMappingVars Game::_fileMappingVars = { NULL, 0, NULL, sizeof(CheckersIPC) };
 
 // MCTS_node - Monte Carlo Tree Search Node
 int Game::MCTS_Node::_MCTS_currentNodeCount = 0;;
@@ -326,8 +328,6 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int 
     else // Player has no turn
         _userTurn = 0;
 
-    std::cout << _userTurn << std::endl;
-
     // Player 1 or Red player
     if (p2Color == PlayerColor::Black)
         _player2Color = PlayerColor::Black;
@@ -345,6 +345,14 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int 
         _currentGameLog._p2Color = 'B';
     else
         _currentGameLog._p2Color = 'W';
+
+
+    if (p1Mode == 5 || p2Mode == 5)
+        if (getFileMappingVars()._mappedViewOfFile != nullptr && getFileMappingVars()._mappedViewOfFile->_training == true)
+        {
+            std::cout << "Training mode on!\n";
+            _isNN_Training = true;
+        }
 }
 Game::~Game()
 {
@@ -796,11 +804,17 @@ void Game::conductMoves(DWORD sleepTime)
                 makeMiniMaxMove(_doDebugPrintout);
                 break;
             case 2: // Alpha Beta
+                //alphaBetaMiniMaxCompare(true);
                 makeAlphaBetaMove(_doDebugPrintout);
                 break; 
             case 3: // Monte Carlo Tree Search
                 makeMCTS_Move();
                 break; 
+            case 4: // Player that never plays here                
+                break;
+            case 5: // Neural Network
+                makeNN_Move();
+                break;
             default:
                 std::cout << "Making random moves as the difficulty selected is unavailable.\n";
                 makeRandomMove(); // If nothing else, make it random!
@@ -922,9 +936,40 @@ float Game::boardEvaluate(const std::vector<PieceType> tiles, int teamTurn)
         evaluation = -evaluation;
     return evaluation;
 }
-
+float Game::biasedBoardEvaluate(const std::vector<PieceType> tiles, int teamTurn, float bias)
+{
+    ++_evaluationCalls;
+    float evaluation = 0.0f;
+    if (teamTurn % 2 == 0)
+        bias = -bias;
+    for (size_t index = 0; index < tiles.size(); index++)
+    {
+        switch (tiles[index])
+        {
+        case PieceType::NoPiece:
+            break;
+        case PieceType::Player1_Pawn:
+            evaluation += _pawnWeight + bias;
+            break;
+        case PieceType::Player2_Pawn:
+            evaluation -= _pawnWeight;
+            break;
+        case PieceType::Player1_King:
+            evaluation += _kingWeight + bias;
+            break;
+        case PieceType::Player2_King:
+            evaluation -= _kingWeight;
+            break;
+        default:
+            break;
+        }
+    }
+    if (teamTurn % 2 == 0)
+        evaluation = -evaluation;
+    return evaluation;
+}
 // Recursively makes boards and evaluates them. Returns the minimum and maximum boardEvaluations made
-float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps)
+float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, const int depth, std::vector<sf::Vector3<int>>& additionalJumps, float biasForEvaluation)
 {
     auto getMoves = [&](std::vector<sf::Vector3<int>>& possibleMoves) {
         if (additionalJumps.empty())
@@ -973,7 +1018,7 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
             }
 
             // Recursion call
-            valHolder = miniMax(newBoard, ((teamTurn + teamAdjustment + 1) % 2), maximizingTurn, depth - 1 + jumpAdjustment, newAdditionalJumps);
+            valHolder = miniMax(newBoard, ((teamTurn + teamAdjustment + 1) % 2), maximizingTurn, depth - 1 + jumpAdjustment, newAdditionalJumps, biasForEvaluation);
 
             // Get new min or max
             if (teamTurn == maximizingTurn) // Get Max
@@ -983,7 +1028,10 @@ float Game::miniMax(Board& board, const int teamTurn, const int maximizingTurn, 
         }
         return minMax;
     }
-    return boardEvaluate(board.getBoardTiles(), maximizingTurn);
+    if(biasForEvaluation == 0.0f)
+        return boardEvaluate(board.getBoardTiles(), maximizingTurn);
+    else
+        return biasedBoardEvaluate(board.getBoardTiles(), maximizingTurn, biasForEvaluation);
 }
 
 // Recursively makes boards and evaluates them with alpha beta cutoff. Returns the minimum and maximum boardEvaluations made
@@ -1182,7 +1230,9 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
         {
             std::cout << "Child visit count: " << std::setw(6) << node->getChildrenNodes()[i]->getVisitCount()
                 << " Score: " << std:: setw(7) << node->getChildrenNodes()[i]->getScore()
-                << " UCB: " << getUCB(node->getChildrenNodes()[i].get()) << "\n";
+                << " UCB: " << getUCB(node->getChildrenNodes()[i].get()) 
+                << " Moves: " << node->getChildrenNodes()[i]->movesStr()
+                << "\n";
 
             if (node->getChildrenNodes()[i]->getVisitCount() > bestChild->getVisitCount())
             {
@@ -1272,7 +1322,7 @@ sf::Vector3<int> Game::miniMaxCall(const std::vector<sf::Vector3<int>>& possible
                     teamAdjustment = -1;
             }
 
-            holder = miniMax(newBoard, ((turn + teamAdjustment + 1) % 2), turn % 2, depthOfSearch - 1 + jumpAdjustment, additionalJumps);
+            holder = miniMax(newBoard, ((turn + teamAdjustment + 1) % 2), turn % 2, depthOfSearch - 1 + jumpAdjustment, additionalJumps, 0.0f);
 
             if(doPrintout)
                 std::cout << holder << "  (Pos, Destination, Jumped) { " << possibleMoves[i].x << ", " << possibleMoves[i].y << ", " << possibleMoves[i].z << " }" << std::endl;
@@ -1384,10 +1434,13 @@ sf::Vector3<int> Game::mCTSCall()
         if (_lastTurnMCTS_wasCalled == _turnCount - 1)
         {
             // Do nothing. The root is as it should be
+            std::cout << "StartUp: MCTS was called by opponent. No change.\n";
         }
         // Same team call after an opponent turn with no call
         else if (_lastTurnMCTS_wasCalled == _turnCount - 2)
         {
+            std::cout << "StartUp: Same team call after an opponent turn with no MCTS call.\n";
+
             //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
             int indexOfMatch = -1;
             for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
@@ -1395,7 +1448,7 @@ sf::Vector3<int> Game::mCTSCall()
                 if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
                 {
                     indexOfMatch = i;
-                    break;
+                    //break;
                 }
             }
             int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
@@ -1403,37 +1456,329 @@ sf::Vector3<int> Game::mCTSCall()
             {
                 _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[indexOfMatch]);
                 _mCTS_RootNode->setParentPointer(nullptr);
+                std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
             }
             else
             {
                 std::cout << "MCTS root swap FAILURE.\n";
                 _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
             }
-            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
         }
         else
         {
             // Just make a new root node
             _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+            std::cout << "StartUp: Made new root node.\n";
         }
 
     }
 
     // If we have a set of moves that need to be made in succession (jumps)
-    if (_mCTS_Moves.size() == 0)
+    if (_queuedMoves.size() == 0)
     {
         std::cout << "Before call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
-        _mCTS_Moves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
+        _queuedMoves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
         _lastTurnMCTS_wasCalled = _turnCount;
+
+
+        {
+            auto movesCopy = _queuedMoves;
+            std::stringstream strStream;
+            auto size = _queuedMoves.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                if (i != 0)
+                    strStream << ", ";
+                strStream << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+                movesCopy.pop();
+            }
+            std::cout << "Moves: " << strStream.str() << "\n";
+        }
+
 
         std::cout << "After call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
         std::cout << "Total nodes created this call: " << MCTS_Node::getNumNodesCreated() << "\n";
         MCTS_Node::resetNodeCount();
     }
 
-    auto front = _mCTS_Moves.front();
-    _mCTS_Moves.pop();
+    auto front = _queuedMoves.front();
+    _queuedMoves.pop();
+    
+    std::cout << "Current submove: " << "{ " << front.x << " " << front.y << " " << front.z << " }" << "\n";
+
     return front;
+}
+
+sf::Vector3<int> Game::neuralNetworkCall(bool doPrintout)
+{
+    // If we have a set of moves that need to be made in succession (jumps)
+    if (_queuedMoves.size() == 0)
+    {
+        _queuedMoves = brainCall(_possibleMoves, _turn, doPrintout);
+
+        // Debug printout of moves
+        if (doPrintout)
+        {
+            auto movesCopy = _queuedMoves;
+            std::stringstream strStream;
+            auto size = _queuedMoves.size();
+            for (size_t i = 0; i < size; i++)
+            {
+                if (i != 0)
+                    strStream << ", ";
+                strStream << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+                movesCopy.pop();
+            }
+
+            std::cout << "Moves: " << strStream.str() << "\n";
+        }
+    }
+
+    auto front = _queuedMoves.front();
+    _queuedMoves.pop();
+
+    if(doPrintout)
+        std::cout << "Current submove: " << "{ " << front.x << " " << front.y << " " << front.z << " }" << "\n";
+
+    return front;
+}
+
+void getFullJumpSet(const std::vector<sf::Vector3<int>>& possibleGeneratedMovesIN,
+    std::vector<std::queue<sf::Vector3<int>>>& movesOUT,
+    std::queue<sf::Vector3<int>>& currentMoveSequence,
+    Board& board,
+    int& teamTurn)
+{
+    for (size_t i = 0; i < possibleGeneratedMovesIN.size(); i++)
+    {
+        // Push first move in sequence
+        currentMoveSequence.push(possibleGeneratedMovesIN[i]);
+
+        bool isKing = false;
+        if (board.getBoardTiles()[possibleGeneratedMovesIN[i].x] >= PieceType::Player1_King)
+            isKing = true;
+
+        Board newBoard(Board::portrayMove(board.getBoardTiles(), possibleGeneratedMovesIN[i]));
+
+        std::vector<sf::Vector3<int>> possibleJumps;
+        // Was not a king, but is now
+        if (isKing || (!isKing && newBoard.getBoardTiles()[possibleGeneratedMovesIN[i].y] < PieceType::Player1_King))
+            newBoard.getIndividualPieceMoves(possibleJumps, possibleGeneratedMovesIN[i].y, teamTurn, true);
+
+        // Either we have more jumps or we don't and thus add the jump sequence
+        if (possibleJumps.empty())
+        {
+            movesOUT.push_back(currentMoveSequence);
+        }
+        else
+        {
+            getFullJumpSet(possibleJumps, movesOUT, currentMoveSequence, newBoard, teamTurn);
+        }
+
+        // Remove move at end of sequence
+        currentMoveSequence.pop();
+    }
+}
+
+std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>& possibleMoves, int team, bool doPrintout)
+{
+    std::vector<std::queue<sf::Vector3<int>>> possibleMoveSequences;
+    // These moves are jumps
+    if (possibleMoves[0].z != -1)
+    {
+        std::queue<sf::Vector3<int>> currentMoveSequence = {};
+        getFullJumpSet(possibleMoves, possibleMoveSequences, currentMoveSequence, _board, team);
+    }
+    else
+    {
+        // No jumps
+        for (size_t i = 0; i < possibleMoves.size(); i++)
+        {
+            std::queue<sf::Vector3<int>> temp;
+            temp.push(possibleMoves[i]);
+            possibleMoveSequences.push_back(temp);
+        }
+    }
+
+    // Make boards to evaluate
+    std::vector<BoardAndMoves> boardsAndMoves = {};
+    for (auto& moveSequence : possibleMoveSequences)
+    {
+        auto movesCopy = moveSequence;
+
+        // Set up board with game tiles
+        Board newBoard(Board::portrayMove(_board.getBoardTiles(), movesCopy.front()));
+        movesCopy.pop();
+
+        // Iterate through rest of move sequence if there are more moves to be made
+        auto size = movesCopy.size();
+        for (size_t i = 0; i < size; i++)
+        {
+            newBoard = Board(Board::portrayMove(newBoard.getBoardTiles(), movesCopy.front()));
+            movesCopy.pop();
+        }
+
+        boardsAndMoves.push_back({ newBoard, moveSequence, 0.0f, BoardClassification::NotAvailable });
+    }
+
+    // Boards to brain here
+    int chosenBoard = 0;
+    if (boardsAndMoves.size() > 1)
+    {
+        // Evaluation for training
+        if (_isNN_Training)
+        {
+            auto evaluateBoard = [this](Board& board, int depthOfSearch, int turn, float bias) {
+                std::vector<sf::Vector3<int>> additionalJumps = {};
+                return miniMax(board, (turn + 1) % 2, turn % 2, depthOfSearch, additionalJumps, bias);
+            };
+            
+            int searchDepth = 3;
+            float bias = 0.0f;
+
+            // Sort and rank boards
+            // Sort by minimax
+            for (size_t i = 0; i < boardsAndMoves.size(); i++)
+                boardsAndMoves[i]._evaluation = evaluateBoard(boardsAndMoves[i]._board, searchDepth, _turn, bias);
+
+            std::sort(boardsAndMoves.begin(), boardsAndMoves.end(), [](BoardAndMoves& a, BoardAndMoves& b) {
+                return a._evaluation > b._evaluation; });
+
+            auto getNumDiffVals = [](std::vector<BoardAndMoves>& boardsAndMoves)
+            {
+                int count = 0;
+                float currentValue = -100000.333f; // This value should not come up at all (ever)
+                for (size_t i = 0; i < boardsAndMoves.size(); i++)
+                {
+                    if (currentValue != boardsAndMoves[i]._evaluation)
+                    {
+                        currentValue = boardsAndMoves[i]._evaluation;
+                        count++;
+                    }
+                }
+                return count;
+            };
+            auto setClassifications = [](std::vector<BoardAndMoves>& boardsAndMoves, int numGood, int numNeutral, int numBad)
+            {
+                int count = 0;
+                auto getClassification = [&]() {
+                    if (count < numGood)
+                        return BoardClassification::Good;
+                    else if (count < numGood + numNeutral)
+                        return BoardClassification::Neutral;
+                    else
+                        return BoardClassification::Bad;
+                };
+                
+                float currentValue = boardsAndMoves[0]._evaluation;
+                for (size_t i = 0; i < boardsAndMoves.size(); i++)
+                {
+                    if (currentValue != boardsAndMoves[i]._evaluation)
+                    {
+                        currentValue = boardsAndMoves[i]._evaluation;
+                        count++;
+                    }
+                    boardsAndMoves[i]._classification = getClassification();
+                }
+            };
+
+            int switchVal = getNumDiffVals(boardsAndMoves);
+            switch (switchVal)
+            {
+            case 1: // All boards the same
+                setClassifications(boardsAndMoves, 0, 1, 0);
+                break;
+            case 2:
+                setClassifications(boardsAndMoves, 1, 0, 1);
+                break;
+            case 3:
+                setClassifications(boardsAndMoves, 1, 1, 1);
+                break;
+            case 4:
+                setClassifications(boardsAndMoves, 2, 0, 2);
+                break;
+            default:
+                int neutral = switchVal - (switchVal + 1) / 3 * 2;
+                int GoodBad = (switchVal - neutral) / 2;
+                setClassifications(boardsAndMoves, GoodBad, neutral, GoodBad);
+                break;
+            }
+                       
+            // Randomize boards so as to prevent left/right leaning descisions
+            std::shuffle(boardsAndMoves.begin(), boardsAndMoves.end(), gen);
+
+            if(doPrintout)
+            {
+                for (size_t i = 0; i < boardsAndMoves.size(); i++)
+                {
+                    switch (boardsAndMoves[i]._classification)
+                    {
+                    case BoardClassification::Good:
+                        std::cout << "Good:    ";
+                        break;
+                    case BoardClassification::Neutral:
+                        std::cout << "Neutral: ";
+                        break;
+                    case BoardClassification::Bad:
+                        std::cout << "Bad:     ";
+                        break;
+                    default:
+                        std::cout << "NA:      ";
+                        break;
+                    }
+                    std::cout << boardsAndMoves[i]._evaluation << "  ";
+
+                    auto movesCopy = boardsAndMoves[i]._moveSequence;
+                    auto size = movesCopy.size();
+                    for (size_t i = 0; i < size; i++)
+                    {
+                        if (i != 0)
+                            std::cout << ", ";
+                        std::cout << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+                        movesCopy.pop();
+                    };
+                    std::cout << "\n";
+                }
+            }
+        }
+
+        // Load Data into mapped file
+        // Set the turn to make decisions for
+        getFileMappingVars()._mappedViewOfFile->_turn = _turn;
+
+        if (doPrintout)
+            std::cout << "Passing Board: ";
+        for (size_t i = 0; i < boardsAndMoves.size(); i++)
+        {            
+            // Load in the board
+            getFileMappingVars()._mappedViewOfFile->setBoardAndClassification(boardsAndMoves[i]._board.getBoardTiles(), boardsAndMoves[i]._classification);
+            getFileMappingVars()._mappedViewOfFile->_nextBoardPlease = false;
+
+            // Waiting for nextBoardRequest
+            while (getFileMappingVars()._mappedViewOfFile->isNextBoardRequested() == false)
+            {
+                // Do nothing
+            }
+            if (doPrintout)
+                std::cout << i << " ";
+        }
+        if (doPrintout)
+        std::cout << "\n";
+
+        getFileMappingVars()._mappedViewOfFile->startThinking(); // Makes _startThink True
+
+        // Wait for selection
+        while (getFileMappingVars()._mappedViewOfFile->_thinkStart == true || getFileMappingVars()._mappedViewOfFile->isThinking() == true)
+        {
+            // Do nothing
+        }
+
+        // Get selection from mapped file
+        chosenBoard = getFileMappingVars()._mappedViewOfFile->getChosenBoardIndex();
+    }
+
+    // Return chosen moves
+    return boardsAndMoves[chosenBoard]._moveSequence;
 }
 
 // Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
@@ -1535,7 +1880,7 @@ void Game::makeMCTS_Move()
 {
     if (_possibleMoves.size() > 0)
     {
-        if (_possibleMoves.size() == 1)
+        if (_possibleMoves.size() == 1 && _queuedMoves.size() == 0)
         {
             _latestMove = _possibleMoves[0];
         }
@@ -1547,6 +1892,17 @@ void Game::makeMCTS_Move()
         finalizeMove();
     }
 }
+// Uses a Neural Network to pick a move
+void Game::makeNN_Move()
+{
+    if (_possibleMoves.size() > 0)
+    {
+        _latestMove = neuralNetworkCall(_doDebugPrintout);
+
+        finalizeMove();
+    }
+}
+
 void Game::finalizeMove()
 {
     //_stats.addTurnData(_possibleMoves.size(), _latestMove);
@@ -1597,6 +1953,11 @@ int Game::setupRandomTournamentBoard()
 std::vector<std::vector<PieceType>>& Game::getTournamentBoards()
 {
     return _startingBoards;
+}
+
+Game::FileMappingVars& Game::getFileMappingVars()
+{
+    return _fileMappingVars;
 }
 
 // Generates the 216 starting tournament boards

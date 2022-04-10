@@ -183,11 +183,12 @@ GameLogs::GameLog GameLogs::GameLog::getGameLogFromString(std::string& gameLogSt
 std::string GameLogs::GameLog::getStr()
 {
 	std::stringstream strStream;
-	strStream << std::setw(7) << _gameNumber
+	strStream << std::setw(7) 
+		<< _gameNumber
 		<< " " << _p2Color
 		<< " " << _winnerColor
 		<< " " << std::setw(3) << _startingBoard
-		<< std::setw(3) << _turnCount << " ";
+		<< " " << std::setw(3) << _turnCount << " ";
 
 	for (size_t i = 0; i < _movesMade.size(); i++)
 	{

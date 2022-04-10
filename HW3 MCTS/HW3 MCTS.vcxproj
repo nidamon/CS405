@@ -154,6 +154,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="board.h" />
+    <ClInclude Include="CheckersIPC.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="gameLogs.h" />
     <ClInclude Include="menu.h" />

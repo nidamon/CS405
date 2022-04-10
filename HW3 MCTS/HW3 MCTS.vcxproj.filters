@@ -44,5 +44,8 @@
     <ClInclude Include="gameLogs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CheckersIPC.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
