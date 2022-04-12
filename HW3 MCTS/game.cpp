@@ -353,26 +353,6 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int 
             std::cout << "Training mode on!\n";
             _isNN_Training = true;
         }
-
-    PieceType _ = PieceType::NoPiece;
-    PieceType r = PieceType::Player1_Pawn;
-    PieceType b = PieceType::Player2_Pawn;
-    PieceType R = PieceType::Player1_King;
-    PieceType B = PieceType::Player2_King;
-
-    // Long Multi-Jump test
-
-    std::vector<PieceType> testTiles = {
-    	_,    _,    _,    _,
-     R,    _,    _,    _,
-    	b,    B,    _,    _,
-     _,    _,    R,    _,
-    	b,    b,    b,    _,
-     _,    _,    _,    _,
-    	_,    _,    b,    _,
-     _,    _,    _,    _,
-    };
-    _board.setup(testTiles);
 }
 Game::~Game()
 {
