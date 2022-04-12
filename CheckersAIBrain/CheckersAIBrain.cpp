@@ -307,21 +307,21 @@ int main()
 	int save = 0;
 	int iterationCount = 0;
 	int checkPointNum = 5000;
-	NeuralNet net(64, 44, 1);
+	NeuralNet net(64, 60, 44, 1); // net(64, 44, 1);
 
-	// Load the last network to continue previous learning
-	if (!loadLatestNetwork(net, session, save))
-	{
-		std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
-		return 0;
-	}
+	//// Load the last network to continue previous learning
+	//if (!loadLatestNetwork(net, session, save))
+	//{
+	//	std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
+	//	return 0;
+	//}
 	// Increment session
 	session += 1;
 	save = 0; // New session, so new save count
 
 	std::vector<BoardVectAndClass> boards;
 
-	float learningRate = 0.004f;
+	float learningRate = 0.001f;
 	auto criterion = torch::nn::HingeEmbeddingLoss();
 	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
 
@@ -378,7 +378,7 @@ int main()
 			else if (a._boardClassification < b._boardClassification)
 				preference.front() = -1.0f;
 			else
-				preference.front() = 0.0f; // If 0, don't train for picking
+				preference.front() = 0.0f; 
 
 			auto target = torch::tensor(torch::detail::TensorDataContainer(preference));
 
@@ -386,7 +386,8 @@ int main()
 			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
 			output = net(x);			
 			auto loss = criterion(output, target); // This here
-			
+			std::cout << "Output: " << output << "\nTarget: " << target << "\n";
+
 			// Backward
 			optimizer.zero_grad();
 			loss.backward();
@@ -599,7 +600,7 @@ NeuralNet loadNetwork(int session, int saveNum)
 	strStream << std::setfill('0') << std::setw(3) << session << "-";
 	strStream << std::setfill('0') << std::setw(3) << saveNum << ".pt";
 	
-	NeuralNet net(64, 44, 1);
+	NeuralNet net(64, 60, 44, 1); // net(64, 44, 1);
 	torch::load(net, strStream.str());
 	return net;
 }

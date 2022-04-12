@@ -412,7 +412,7 @@ bool Game::runStep(bool mouseButtonPressed)
     drawSelf();
 
     int waitTime = 0;
-    if (true/*!_isNN_Training*/)
+    if (!_isNN_Training)
         waitTime = 200;
 
     conductMoves(waitTime);
@@ -1602,7 +1602,6 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
     // These moves are jumps
     if (possibleMoves[0].z != -1)
     {
-        std::cout << "Getting jumps\n";
         std::vector<sf::Vector3<int>> currentMoveSequence = {};
         getFullJumpSet(possibleMoves, possibleMoveSequences, currentMoveSequence, _board, team);
     }
@@ -1623,8 +1622,6 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
     {
         auto movesCopy = moveSequence;
 
-        std::cout << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
-
         // Set up board with game tiles
         Board newBoard(Board::portrayMove(_board.getBoardTiles(), movesCopy.front()));
         movesCopy.pop();
@@ -1634,14 +1631,8 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
         for (size_t i = 0; i < size; i++)
         {
             newBoard = Board(Board::portrayMove(newBoard.getBoardTiles(), movesCopy.front()));
-
-            std::cout << ", ";
-            std::cout << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
-
-
             movesCopy.pop();
         }
-        std::cout << "\n";
         boardsAndMoves.push_back({ newBoard, moveSequence, 0.0f, BoardClassification::NotAvailable });
     }
 
@@ -1657,7 +1648,7 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
                 return miniMax(board, (turn + 1) % 2, turn % 2, depthOfSearch, additionalJumps, bias);
             };
             
-            int searchDepth = 4;
+            int searchDepth = 3;
             float bias = 0.0f;
 
             // Sort and rank boards
@@ -1787,7 +1778,7 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
                 std::cout << i << " ";
         }
         if (doPrintout)
-        std::cout << "\n";
+            std::cout << "\n";
 
         getFileMappingVars()._mappedViewOfFile->startThinking(); // Makes _startThink True
 

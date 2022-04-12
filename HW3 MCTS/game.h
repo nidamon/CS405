@@ -420,7 +420,7 @@ private:
 	// Testing
 	bool _isTesting = false;
 	int _testCount = 0;
-	bool _doDebugPrintout = true;
+	bool _doDebugPrintout = false;
 
 	static int _miniMaxCalls;
 	static int _alphaBetaCalls;
