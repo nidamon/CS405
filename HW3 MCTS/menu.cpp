@@ -46,15 +46,23 @@ Menu::~Menu()
 void Menu::run()
 {
 	// Prevents jumping straight into a game from the menu when undesired
-	bool aGameHasRun = false;
+	bool aNNGameHasRun = false;
 
 	_gfx.setFramerateLimit(30);
 	while (_gfx.isOpen())
 	{
-		if (aGameHasRun && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
+		if (_p1Difficulty == 5 || _p2Difficulty == 5)
 		{
-			std::cout << "\n\nAuto starting next Game\n\n";
-			_currentState = State::Play;
+			if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+				if (aNNGameHasRun && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
+				{
+					std::cout << "\n\nAuto starting next Game\n\n";
+					_currentState = State::Play;
+				}
+		}
+		else
+		{
+			aNNGameHasRun = false;
 		}
 
 
@@ -90,7 +98,9 @@ void Menu::run()
 			break;
 		case Menu::State::Play:
 			// Pass the bool to game
-			aGameHasRun = true;
+			if (_p1Difficulty == 5 || _p2Difficulty == 5)
+				if(Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+					aNNGameHasRun = true;
 			runGame();
 			break;
 		case Menu::State::Quit: // Quit
@@ -168,7 +178,6 @@ void Menu::runGame()
 
 		// Set up game
 		_game = std::move(std::make_unique<Game>(_gfx, getPlayer2Color(), _tournamentModeOn, _p1Difficulty, _p1Depth, _p2Difficulty, _p2Depth));
-		_game->enableDebugPrintout(false);
 	}
 	if (_game != nullptr && _game->runStep(_mouseButtonPressed))
 	{

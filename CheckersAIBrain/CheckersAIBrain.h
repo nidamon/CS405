@@ -26,8 +26,8 @@ struct NeuralNetImpl : torch::nn::Module
     }
     torch::Tensor forward(torch::Tensor x) {  
         x = torch::leaky_relu(hidden1(x));
-        x = torch::tanh(hidden2(x));
-        x = torch::selu(out(x));
+        x = torch::selu(hidden2(x));
+        x = torch::tanh(out(x));
         return x;
     }
 

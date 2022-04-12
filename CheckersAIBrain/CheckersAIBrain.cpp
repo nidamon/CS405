@@ -8,7 +8,7 @@
 #include <string>
 #include "out/build/CheckersIPC.h"
 
-//#define DEBUG_PRINTOUT_CHECKERSBRAIN
+#define DEBUG_PRINTOUT_CHECKERSBRAIN
 
 void DebugTextOut(std::string debugText)
 {
@@ -267,8 +267,8 @@ FileMappingVars& getFileMappingVars()
 // Main
 int main()
 {
-	bool doDebugPrintOut = false;
-
+	bool doDebugPrintOut = true;
+	   
 	while (!openMappedFile())
 	{
 		std::string str;
@@ -300,6 +300,9 @@ int main()
 			std::cout << "It DOES NOT say training\n";
 	}
 
+	if(doDebugPrintOut)
+		std::cout << "Debug printout on.\n";
+
 	int session = 0;
 	int save = 0;
 	int iterationCount = 0;
@@ -318,7 +321,7 @@ int main()
 
 	std::vector<BoardVectAndClass> boards;
 
-	float learningRate = 0.001f;
+	float learningRate = 0.004f;
 	auto criterion = torch::nn::HingeEmbeddingLoss();
 	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
 
@@ -408,14 +411,19 @@ int main()
 		
 		// Result
 		auto value = output.item().toFloat();
+		std::cout << "Choosing ";
 		if (value > 0.0f)
 		{
-			return a;
+			std::cout << a.getClassStr() << " over " << b.getClassStr();
+			std::cout << "  Value: " << value << "\n";
+			return &a;
 		}
 		else
 		{
-			return b;
-		}
+			std::cout << b.getClassStr() << " over " << a.getClassStr();
+			std::cout << "  Value: " << value << "\n";
+			return &b;
+		}		
 	};
 	   
 	while (getFileMappingVars()._mappedViewOfFile != nullptr   // No mapped file
@@ -490,6 +498,11 @@ int main()
 		{
 			for (size_t i = 0; i < lastRoundWinners.size(); i++)
 			{
+				std::cout << lastRoundWinners[i]->getClassStr() << "\n";
+			}
+
+			for (size_t i = 0; i < lastRoundWinners.size(); i++)
+			{
 				// Odd board gets free pass to next round
 				if (i + 1 == lastRoundWinners.size())
 				{
@@ -501,7 +514,7 @@ int main()
 				{
 					BoardVectAndClass* winningBoard = nullptr;
 					// Compare boards i and i+1
-					winningBoard = &boardSelection(*lastRoundWinners[i], *lastRoundWinners[i + 1]);
+					winningBoard = boardSelection(*lastRoundWinners[i], *lastRoundWinners[i + 1]);
 
 					// Add the new winner
 					winningBoards.push_back(winningBoard);

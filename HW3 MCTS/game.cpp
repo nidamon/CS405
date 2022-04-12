@@ -353,6 +353,26 @@ Game::Game(sf::RenderWindow& gfx, PlayerColor p2Color, bool tournamentMode, int 
             std::cout << "Training mode on!\n";
             _isNN_Training = true;
         }
+
+    PieceType _ = PieceType::NoPiece;
+    PieceType r = PieceType::Player1_Pawn;
+    PieceType b = PieceType::Player2_Pawn;
+    PieceType R = PieceType::Player1_King;
+    PieceType B = PieceType::Player2_King;
+
+    // Long Multi-Jump test
+
+    std::vector<PieceType> testTiles = {
+    	_,    _,    _,    _,
+     R,    _,    _,    _,
+    	b,    B,    _,    _,
+     _,    _,    R,    _,
+    	b,    b,    b,    _,
+     _,    _,    _,    _,
+    	_,    _,    b,    _,
+     _,    _,    _,    _,
+    };
+    _board.setup(testTiles);
 }
 Game::~Game()
 {
@@ -390,12 +410,17 @@ void Game::run()
 // Returns true if gameover
 bool Game::runStep(bool mouseButtonPressed)
 {
-    if (mouseButtonPressed)
+    if (mouseButtonPressed || _isNN_Training)
     {
         if (_gameOver) // If mouse click and the game is over
             return true;
-        if (_userTurn == _turn)
-            setSelectedIndex();
+
+        // User input
+        if (mouseButtonPressed)
+        {
+            if (_userTurn == _turn)
+                setSelectedIndex();
+        }
     }
 
     // Get possible piece moves
@@ -405,7 +430,12 @@ bool Game::runStep(bool mouseButtonPressed)
     winCheck();
 
     drawSelf();
-    conductMoves(200);
+
+    int waitTime = 0;
+    if (true/*!_isNN_Training*/)
+        waitTime = 200;
+
+    conductMoves(waitTime);
 
     return false;
 }
@@ -793,7 +823,7 @@ void Game::conductMoves(DWORD sleepTime)
 
             if(_isTesting)
                 drawSelf();
-            if(sleepTime > 0 && !_isNN_Training)
+            if(sleepTime > 0)
                 Sleep(sleepTime);
             switch (_difficulty)
             {
@@ -813,7 +843,7 @@ void Game::conductMoves(DWORD sleepTime)
             case 4: // Player that never plays here                
                 break;
             case 5: // Neural Network
-                makeNN_Move();
+                makeNN_Move(_doDebugPrintout);
                 break;
             default:
                 std::cout << "Making random moves as the difficulty selected is unavailable.\n";
@@ -827,7 +857,7 @@ void Game::conductMoves(DWORD sleepTime)
 
 
             drawSelf();
-            if (sleepTime > 0 && !_isNN_Training)
+            if (sleepTime > 0)
                 Sleep(sleepTime);
         }        
     }
@@ -1545,14 +1575,14 @@ sf::Vector3<int> Game::neuralNetworkCall(bool doPrintout)
 
 void getFullJumpSet(const std::vector<sf::Vector3<int>>& possibleGeneratedMovesIN,
     std::vector<std::queue<sf::Vector3<int>>>& movesOUT,
-    std::queue<sf::Vector3<int>>& currentMoveSequence,
+    std::vector<sf::Vector3<int>>& currentMoveSequence,
     Board& board,
     int& teamTurn)
 {
     for (size_t i = 0; i < possibleGeneratedMovesIN.size(); i++)
     {
         // Push first move in sequence
-        currentMoveSequence.push(possibleGeneratedMovesIN[i]);
+        currentMoveSequence.push_back(possibleGeneratedMovesIN[i]);
 
         bool isKing = false;
         if (board.getBoardTiles()[possibleGeneratedMovesIN[i].x] >= PieceType::Player1_King)
@@ -1568,7 +1598,13 @@ void getFullJumpSet(const std::vector<sf::Vector3<int>>& possibleGeneratedMovesI
         // Either we have more jumps or we don't and thus add the jump sequence
         if (possibleJumps.empty())
         {
-            movesOUT.push_back(currentMoveSequence);
+            std::queue<sf::Vector3<int>> currentQue;
+            for (size_t i = 0; i < currentMoveSequence.size(); i++)
+            {
+                currentQue.push(currentMoveSequence[i]);
+            }
+
+            movesOUT.push_back(currentQue);
         }
         else
         {
@@ -1576,7 +1612,7 @@ void getFullJumpSet(const std::vector<sf::Vector3<int>>& possibleGeneratedMovesI
         }
 
         // Remove move at end of sequence
-        currentMoveSequence.pop();
+        currentMoveSequence.pop_back();
     }
 }
 
@@ -1586,7 +1622,8 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
     // These moves are jumps
     if (possibleMoves[0].z != -1)
     {
-        std::queue<sf::Vector3<int>> currentMoveSequence = {};
+        std::cout << "Getting jumps\n";
+        std::vector<sf::Vector3<int>> currentMoveSequence = {};
         getFullJumpSet(possibleMoves, possibleMoveSequences, currentMoveSequence, _board, team);
     }
     else
@@ -1606,6 +1643,8 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
     {
         auto movesCopy = moveSequence;
 
+        std::cout << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+
         // Set up board with game tiles
         Board newBoard(Board::portrayMove(_board.getBoardTiles(), movesCopy.front()));
         movesCopy.pop();
@@ -1615,9 +1654,14 @@ std::queue<sf::Vector3<int>> Game::brainCall(const std::vector<sf::Vector3<int>>
         for (size_t i = 0; i < size; i++)
         {
             newBoard = Board(Board::portrayMove(newBoard.getBoardTiles(), movesCopy.front()));
+
+            std::cout << ", ";
+            std::cout << "{ " << movesCopy.front().x << " " << movesCopy.front().y << " " << movesCopy.front().z << " }";
+
+
             movesCopy.pop();
         }
-
+        std::cout << "\n";
         boardsAndMoves.push_back({ newBoard, moveSequence, 0.0f, BoardClassification::NotAvailable });
     }
 
@@ -1893,11 +1937,12 @@ void Game::makeMCTS_Move()
     }
 }
 // Uses a Neural Network to pick a move
-void Game::makeNN_Move()
+void Game::makeNN_Move(bool doPrintout)
 {
     if (_possibleMoves.size() > 0)
     {
-        _latestMove = neuralNetworkCall(_doDebugPrintout);
+        std::cout << "Engaging Network Brain\n";
+        _latestMove = neuralNetworkCall(doPrintout);
 
         finalizeMove();
     }

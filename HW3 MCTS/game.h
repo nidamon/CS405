@@ -184,7 +184,7 @@ public:
 					// These moves are jumps
 					if (possibleGeneratedMoves[0].z != -1)
 					{
-						std::queue<sf::Vector3<int>> currentMoveSequence = {};
+						std::vector<sf::Vector3<int>> currentMoveSequence = {};
 						getFullJumpSet(possibleGeneratedMoves, possibleMoves, currentMoveSequence, _board, _teamTurn);
 					}
 					else
@@ -243,12 +243,12 @@ public:
 		}
 	private:
 		void getFullJumpSet(std::vector<sf::Vector3<int>>& possibleGeneratedMovesIN, std::vector<std::queue<sf::Vector3<int>>> &movesOUT, 
-							std::queue<sf::Vector3<int>>& currentMoveSequence, Board& board, int& teamTurn)
+							std::vector<sf::Vector3<int>>& currentMoveSequence, Board& board, int& teamTurn)
 		{
 			for (size_t i = 0; i < possibleGeneratedMovesIN.size(); i++)
 			{				
 				// Push first move in sequence
-				currentMoveSequence.push(possibleGeneratedMovesIN[i]);
+				currentMoveSequence.push_back(possibleGeneratedMovesIN[i]);
 
 				bool isKing = false;
 				if(board.getBoardTiles()[possibleGeneratedMovesIN[i].x] >= PieceType::Player1_King)
@@ -264,8 +264,14 @@ public:
 				// Either we have more jumps or we don't and thus add the jump sequence
 				if (possibleJumps.empty())
 				{
-					movesOUT.push_back(currentMoveSequence);				
-					auto child = std::make_unique<MCTS_Node>(this, newBoard, nextTurn(), currentMoveSequence);
+					std::queue<sf::Vector3<int>> currentQue;
+					for (size_t i = 0; i < currentMoveSequence.size(); i++)
+					{
+						currentQue.push(currentMoveSequence[i]);
+					}
+
+					movesOUT.push_back(currentQue);
+					auto child = std::make_unique<MCTS_Node>(this, newBoard, nextTurn(), currentQue);
 					_childrenNodes.push_back(std::move(child));
 				}
 				else
@@ -274,8 +280,8 @@ public:
 				}
 
 				// Remove move at end of sequence
-				currentMoveSequence.pop();
-			}
+				currentMoveSequence.pop_back();
+			}			
 		}
 		int nextTurn()
 		{
@@ -349,7 +355,7 @@ private:
 	// Uses the Monte Carlo Tree Search algorithm to pick a move
 	void makeMCTS_Move();
 	// Uses a Neural Network to pick a move
-	void makeNN_Move();
+	void makeNN_Move(bool doPrintout);
 
 	void finalizeMove();
 
@@ -414,7 +420,7 @@ private:
 	// Testing
 	bool _isTesting = false;
 	int _testCount = 0;
-	bool _doDebugPrintout = false;
+	bool _doDebugPrintout = true;
 
 	static int _miniMaxCalls;
 	static int _alphaBetaCalls;

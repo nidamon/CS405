@@ -37,6 +37,30 @@ struct BoardVectAndClass
 {
 	std::vector<PieceType> _board;
 	BoardClassification _boardClassification;
+
+	std::string getClassStr()
+	{
+		std::stringstream strStream;
+		switch (_boardClassification)
+		{
+		case BoardClassification::NotAvailable:
+			strStream << "NotAvailable";
+			break;
+		case BoardClassification::Good:
+			strStream << "Good";
+			break;
+		case BoardClassification::Neutral:
+			strStream << "Neutral";
+			break;
+		case BoardClassification::Bad:
+			strStream << "Bad";
+			break;
+		default:
+			break;
+		}
+
+		return strStream.str();
+	}
 };
 
 struct CheckersIPC
