@@ -8,7 +8,6 @@ This is the header file for using the neural network features from PyTorch
 #ifndef CHECKERS_AI_BRAIN_H
 #define CHECKERS_AI_BRAIN_H
 
-#include <iostream>
 #include <torch/torch.h>
 
 bool openMappedFile();
@@ -16,8 +15,8 @@ bool closeMappedFile();
 
 struct NeuralNetImpl : torch::nn::Module
 {
-    NeuralNetImpl(int inputSize, int hiddenSize, int hiddenSize2, int outputSize)
-        : hidden1(inputSize, hiddenSize), hidden2(hiddenSize, hiddenSize), hidden3(hiddenSize, hiddenSize2), out(hiddenSize2, outputSize)
+    NeuralNetImpl(int inputSize = 32, int hiddenSize1 = 33, int hiddenSize2 = 24, int outputSize = 1)
+        : hidden1(inputSize, hiddenSize1), hidden2(hiddenSize1, hiddenSize1), hidden3(hiddenSize1, hiddenSize2), out(hiddenSize2, outputSize)
     {
         register_module("hidden1", hidden1);
         register_module("hidden2", hidden2);
@@ -27,9 +26,9 @@ struct NeuralNetImpl : torch::nn::Module
     }
     torch::Tensor forward(torch::Tensor x) {  
         x = torch::leaky_relu(hidden1(x));
-        x = torch::selu(hidden2(x));
-        x = torch::relu(hidden3(x));
-        x = torch::tanh(out(x));
+        x = torch::hardswish(hidden2(x));
+        x = torch::selu(hidden3(x));
+        x = torch::sigmoid(out(x));
         return x;
     }
 

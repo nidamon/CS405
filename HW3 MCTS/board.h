@@ -35,7 +35,8 @@ enum class PieceType
 class Board
 {
 public:
-	Board(bool player2IsBlack = true);
+	Board();
+	Board(bool player2IsBlack);
 	Board(std::vector<PieceType> tiles);
 	~Board();
 
@@ -50,6 +51,7 @@ private:
 public:
 	static void pieceTypeToCout(PieceType pieceType);
 	void setup(std::vector<PieceType>& newTiles);
+	void setRand(std::mt19937& mt);
 	static sf::Vector2<float> indexToPosition(int tileIndex);
 	static int xyToIndex(int x, int y);
 	static sf::Vector2<int> indexToXY(int tileIndex);

@@ -46,26 +46,18 @@ Menu::~Menu()
 void Menu::run()
 {
 	// Prevents jumping straight into a game from the menu when undesired
-	bool aNNGameHasRun = false;
+	bool gameOn = false;
 
 	_gfx.setFramerateLimit(30);
 	while (_gfx.isOpen())
 	{
-		if (_p1Difficulty == 5 || _p2Difficulty == 5)
-		{
-			if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
-				if (aNNGameHasRun && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
-				{
-					std::cout << "\n\nAuto starting next Game\n\n";
-					_currentState = State::Play;
-				}
-		}
-		else
-		{
-			aNNGameHasRun = false;
-		}
 
-
+		if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+			if (gameOn && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
+			{
+				std::cout << "\n\nAuto starting next Game\n\n";
+				_currentState = State::Play;
+			}
 
 		_mouseButtonPressed = false;
 		sf::Event event;
@@ -97,10 +89,10 @@ void Menu::run()
 			runReplaysMenu();
 			break;
 		case Menu::State::Play:
-			// Pass the bool to game
-			if (_p1Difficulty == 5 || _p2Difficulty == 5)
-				if(Game::getFileMappingVars()._mappedViewOfFile != nullptr)
-					aNNGameHasRun = true;
+			// Run game
+			if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+				if (_game != nullptr && gameOn == false)
+					gameOn = true;
 			runGame();
 			break;
 		case Menu::State::Quit: // Quit
@@ -341,7 +333,7 @@ void Menu::displayOptionsMenu()
 	_gfx.draw(_colorPickPieces[_p2Color]);
 
 	// Algorithm for player 1
-	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3)
+	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3 || _p1Difficulty == 5)
 	{
 		sf::Vector2<int> optionsPositionOffset = { 26, 60 };
 		sf::Vector2<int> positionOffset = { optionsPositionOffset.x + 91, optionsPositionOffset.y + 42 };
@@ -349,7 +341,7 @@ void Menu::displayOptionsMenu()
 		drawNumber(_gfx, 2, _p1Depth, positionOffset);
 	}
 	// Algorithm for player 2
-	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3)
+	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3 || _p2Difficulty == 5)
 	{
 		sf::Vector2<int> optionsPositionOffset = { 26, 60 };
 		sf::Vector2<int> positionOffset = { optionsPositionOffset.x + 91, optionsPositionOffset.y + 42 + 42 };
@@ -770,6 +762,7 @@ Menu::Button* Menu::getButton(Button::Purpose purpose, std::vector<Button>& butt
 	for (auto& button : buttons)
 		if (button.getPurpose() == purpose)
 			return &button;
+	return nullptr;
 }
 
 void Menu::setupMiscSprites()
@@ -837,7 +830,7 @@ void Menu::player1ModeShift(int shift)
 	if (_p1Difficulty == 4 && _p2Difficulty == 4)
 		player2ModeShift(1);
 
-	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3) // DepthShift
+	if (_p1Difficulty == 1 || _p1Difficulty == 2 || _p1Difficulty == 3 || _p1Difficulty == 5) // DepthShift
 	{
 		getButton(Button::Purpose::P1DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
 		getButton(Button::Purpose::P1DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);
@@ -860,7 +853,7 @@ void Menu::player2ModeShift(int shift)
 	if (_p2Difficulty == 4 && _p1Difficulty == 4)
 		player1ModeShift(1);
 
-	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3) // DepthShift
+	if (_p2Difficulty == 1 || _p2Difficulty == 2 || _p2Difficulty == 3 || _p2Difficulty == 5) // DepthShift
 	{
 		getButton(Button::Purpose::P2DepthShiftLeftArrow, _optionsMenuButtons)->setActive(true);
 		getButton(Button::Purpose::P2DepthShiftRightArrow, _optionsMenuButtons)->setActive(true);

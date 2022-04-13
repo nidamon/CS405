@@ -13,53 +13,21 @@ This is the header file for connecting Checkers with the Checkers brain (Checker
 // Checkers Game version should not have this redefined
 enum class PieceType;
 
-enum class BoardClassification
-{
-	NotAvailable,
-	Good,
-	Neutral,
-	Bad
-};
-
-struct BoardArrAndClass
+struct BoardArrAndPercent
 {
 	PieceType _board[32];
-	BoardClassification _boardClassification;
+	float _redWinPercent;
 };
 
-struct BoardVectAndClass
+struct BoardVectAndPercent
 {
 	std::vector<PieceType> _board;
-	BoardClassification _boardClassification;
-
-	std::string getClassStr()
-	{
-		std::stringstream strStream;
-		switch (_boardClassification)
-		{
-		case BoardClassification::NotAvailable:
-			strStream << "NotAvailable";
-			break;
-		case BoardClassification::Good:
-			strStream << "Good";
-			break;
-		case BoardClassification::Neutral:
-			strStream << "Neutral";
-			break;
-		case BoardClassification::Bad:
-			strStream << "Bad";
-			break;
-		default:
-			break;
-		}
-
-		return strStream.str();
-	}
+	float _redWinPercent;
 };
 
 struct CheckersIPC
 {
-	BoardArrAndClass _bc;
+	BoardArrAndPercent _bp;
 	bool _nextBoardPlease = true;
 	bool _thinkStart = false;
 	bool _thinking = false;
@@ -71,20 +39,20 @@ struct CheckersIPC
 	bool _training = false;
 
 
-	BoardVectAndClass getBoardAndClassification() const
+	BoardVectAndPercent getBoardAndClassification() const
 	{
 		std::vector<PieceType> vectBoard(32);
 		for (size_t i = 0; i < 32; i++)
-			vectBoard[i] = _bc._board[i];
+			vectBoard[i] = _bp._board[i];
 
-		return BoardVectAndClass{ vectBoard, _bc._boardClassification };
+		return BoardVectAndPercent{ vectBoard, _bp._redWinPercent };
 	}
-	void setBoardAndClassification(std::vector<PieceType>& board, BoardClassification boardClassification)
+	void setBoardAndClassification(std::vector<PieceType>& board, float redWinPercent)
 	{
 		for (size_t i = 0; i < 32; i++)
-			_bc._board[i] = board[i];
+			_bp._board[i] = board[i];
 
-		_bc._boardClassification = boardClassification;
+		_bp._redWinPercent = redWinPercent;
 	}
 
 	void nextBoardPlease()

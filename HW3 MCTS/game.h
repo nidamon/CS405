@@ -322,6 +322,12 @@ private:
 	// Calls the Monte Carlo Tree Search algorithm
 	std::queue<sf::Vector3<int>> mCTS(MCTS_Node* rootNode, float timeAvailableInSeconds);
 
+	struct BoardAndMoves {
+		Board _board;
+		std::queue<sf::Vector3<int>> _moveSequence;
+		float _redPercentWin = 0.0f;
+	};
+	std::vector<BoardAndMoves> mCTS_ReturnChildren(MCTS_Node* rootNode, float timeAvailableInSeconds);
 
 	// Returns the optimal move upon a DFS of x turns of possible moves
 	sf::Vector3<int> miniMaxCall(const std::vector<sf::Vector3<int>>& possibleMoves, int depthOfSearch, int turn, bool doPrintout);
@@ -333,13 +339,9 @@ private:
 	sf::Vector3<int> mCTSCall();
 
 	sf::Vector3<int> neuralNetworkCall(bool doPrintout);
-	struct BoardAndMoves {
-		Board _board;
-		std::queue<sf::Vector3<int>> _moveSequence;
-		float _evaluation = 0.0f;
-		BoardClassification _classification = BoardClassification::NotAvailable;
-	};
+
 	std::queue<sf::Vector3<int>> brainCall(const std::vector<sf::Vector3<int>>& possibleMoves, int team, bool doPrintout);
+	std::queue<sf::Vector3<int>> brainCall(int team, bool doPrintout, float timeAvailableInSeconds);
 
 	// Compares the results of the comparison between miniMaxCall() and alphaBetaCall()
 	void alphaBetaMiniMaxCompare(bool doPrintout);

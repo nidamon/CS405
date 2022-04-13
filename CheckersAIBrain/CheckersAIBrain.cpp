@@ -1,5 +1,10 @@
 ﻿// CheckersAIBrain.cpp : Defines the entry point for the application.
-//
+/* 
+Nathan Damon
+CS 405
+4/5/2022
+This is the main / source file for using the neural network features from PyTorch
+*/
 
 #include "CheckersAIBrain.h"
 
@@ -267,25 +272,20 @@ FileMappingVars& getFileMappingVars()
 // Main
 int main()
 {
-	bool doDebugPrintOut = true;
+	const bool doDebugPrintOut = true;
 	   
-	while (!openMappedFile())
+	bool openMapHasTriedOnce = false;
+	if(!openMappedFile())
 	{
 		std::string str;
 		std::cout << "Could not find the mapped file.\n";
-		std::cout << "Is the game requesting this proccess to be running yet? (y/n): ";
-		std::cin >> str;
-		if (str[0] == 'n')
-		{
-			std::cout << "Wait till activation is requested then hit the enter key.\n";
-			std::cin >> str;
-		}
-		if (str[0] == 'y')
-		{
-			std::cout << "It seems there is a problem here.\n";	
-			std::cout << "Exiting.\n";
+		std::cout << "If the game has not requested for this proccess to run, then wait until it does and then hit enter. ";
+		std::getline(std::cin, str);
+		if (!openMappedFile())
+		{	
+			std::cout << "Failed to open.\nExiting.\n";
 			return 0;
-		}
+		}		
 	}
 
 	getFileMappingVars()._mappedViewOfFile->setBrainOnOff(true);
@@ -306,87 +306,74 @@ int main()
 	int session = 0;
 	int save = 0;
 	int iterationCount = 0;
-	int checkPointNum = 5000;
-	NeuralNet net(64, 60, 44, 1); // net(64, 44, 1);
-
-	//// Load the last network to continue previous learning
-	//if (!loadLatestNetwork(net, session, save))
-	//{
-	//	std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
-	//	return 0;
-	//}
+	int checkPointNum = 500;
+	NeuralNet net;
+	// Load the last network to continue previous learning
+	if (!loadLatestNetwork(net, session, save))
+	{
+		std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
+		return 0;
+	}
+	net->train(isTraining);
+	
 	// Increment session
 	session += 1;
 	save = 0; // New session, so new save count
 
-	std::vector<BoardVectAndClass> boards;
+	std::vector<BoardVectAndPercent> boards;
 
-	float learningRate = 0.001f;
-	auto criterion = torch::nn::HingeEmbeddingLoss();
+	const float learningRate = 0.001f;
+	auto criterion = torch::nn::HuberLoss();
 	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
 
-	// Network stuff in here
-	auto boardSelection = [&](BoardVectAndClass& a, BoardVectAndClass& b) {
-		auto addBoardsValues = [](std::vector<float>& data, const std::vector<PieceType>& board1, const std::vector<PieceType>& board2, int turn)
-		{
-			auto addBoardValues = [turn](std::vector<float>& data, size_t indexStart, const std::vector<PieceType>& board) {
-				float modifier = 1.0f;
-				if (turn % 2 == 0)
-					modifier = -1.0f;
-				for (size_t i = 0; i < board.size(); i++)
+	// Network stuff in here		   
+	const float pawnWeight = 1.0f;
+	const float kingWeight = 1.5f;
+	auto boardEvaluation = [&](BoardVectAndPercent& boardAndTrainingValue)
+	{
+		auto addBoardValues = [&](std::vector<float>& data, const std::vector<PieceType>& board) {
+			for (size_t i = 0; i < board.size(); i++)
+			{
+				float tileVal = 0.0f;
+				switch (board[i])
 				{
-					float tileVal = 0.0f;
-					switch (board[i])
-					{
-					case PieceType::NoPiece:
-						tileVal = 0.0f * modifier;
-						break;
-					case PieceType::Player1_Pawn:
-						tileVal = 1.0f * modifier;
-						break;
-					case PieceType::Player2_Pawn:
-						tileVal = -1.0f * modifier;
-						break;
-					case PieceType::Player1_King:
-						tileVal = 1.5f * modifier;
-						break;
-					case PieceType::Player2_King:
-						tileVal = -1.5f * modifier;
-						break;
-					default:
-						break;
-					}
-					data[indexStart + i] = tileVal;
+				case PieceType::NoPiece:
+					tileVal = 0.0f;
+					break;
+				case PieceType::Player1_Pawn:
+					tileVal = pawnWeight;
+					break;
+				case PieceType::Player2_Pawn:
+					tileVal = -pawnWeight;
+					break;
+				case PieceType::Player1_King:
+					tileVal = kingWeight;
+					break;
+				case PieceType::Player2_King:
+					tileVal = -kingWeight;
+					break;
+				default:
+					break;
 				}
-			};
-			addBoardValues(data, 0, board1);
-			addBoardValues(data, 32, board2);
+				data[i] = tileVal;
+			}
 		};
 
-		std::vector<float> data(64);
-		int turn = 1;
-		if (getFileMappingVars()._mappedViewOfFile != nullptr)
-			turn = getFileMappingVars()._mappedViewOfFile->_turn;
-		addBoardsValues(data, a._board, b._board, turn);
-		
+		std::vector<float> data(32);
+		addBoardValues(data, boardAndTrainingValue._board);
+
 		at::Tensor output;
 		if (isTraining)
 		{
-			std::vector<float> preference{ 0.0f };
-			if (a._boardClassification > b._boardClassification)
-				preference.front() = 1.0f;
-			else if (a._boardClassification < b._boardClassification)
-				preference.front() = -1.0f;
-			else
-				preference.front() = 0.0f; 
-
-			auto target = torch::tensor(torch::detail::TensorDataContainer(preference));
+			std::vector<float> targetVal = { boardAndTrainingValue._redWinPercent };
+			auto target = torch::tensor(torch::detail::TensorDataContainer(targetVal));
 
 			// Forward
 			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
-			output = net(x);			
+			output = net(x);
+
 			auto loss = criterion(output, target); // This here
-			std::cout << "Output: " << output << "\nTarget: " << target << "\n";
+			//std::cout << "Output: " << output << "\nTarget: " << target << "\n";
 
 			// Backward
 			optimizer.zero_grad();
@@ -409,24 +396,14 @@ int main()
 			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
 			output = net(x);
 		}
-		
+
 		// Result
 		auto value = output.item().toFloat();
-		std::cout << "Choosing ";
-		if (value > 0.0f)
-		{
-			std::cout << a.getClassStr() << " over " << b.getClassStr();
-			std::cout << "  Value: " << value << "\n";
-			return &a;
-		}
-		else
-		{
-			std::cout << b.getClassStr() << " over " << a.getClassStr();
-			std::cout << "  Value: " << value << "\n";
-			return &b;
-		}		
+		std::cout << "Out: " << value << " -> " << boardAndTrainingValue._redWinPercent << "\n";
+
+		return value;
 	};
-	   
+
 	while (getFileMappingVars()._mappedViewOfFile != nullptr   // No mapped file
 		&& getFileMappingVars()._mappedViewOfFile->isBrainOn() // Are we supposed to be off
 		&& getFileMappingVars()._mappedViewOfFile->isGameOn()) // Should we turn off
@@ -458,104 +435,58 @@ int main()
 		if (doDebugPrintOut)
 			for (size_t i = 0; i < boards.size(); i++)
 			{
-				std::cout << "[" << i << "] ";
-				switch (boards[i]._boardClassification)
-				{
-				case BoardClassification::Good:
-					std::cout << "Good";
-					break;
-				case BoardClassification::Neutral:
-					std::cout << "Neutral";
-					break;
-				case BoardClassification::Bad:
-					std::cout << "Bad";
-					break;
-				default:
-					std::cout << "NA";
-					break;
-				}
+				std::cout << "[" << i << "] redWinPercent: " << boards[i]._redWinPercent;
 				std::cout << "\n";
 			}
-
 
 
 		getFileMappingVars()._mappedViewOfFile->setThinking(true);
 		getFileMappingVars()._mappedViewOfFile->startThinking(); // Makes _startThink false
 
 
-		// Thinking here
+		// Thinking right here
+		for (size_t i = 0; i < boards.size(); i++)
+			boards[i]._redWinPercent = boardEvaluation(boards[i]);
+
+
 		int boardIndex = 0;
 
-		// Load up the boards into pointer vector
-		std::vector<BoardVectAndClass*> lastRoundWinners;
+		// Getting board
+		if (doDebugPrintOut)
+		{
+			std::cout << "BoardCount: " << boards.size() << "\n";
+		}
+		float currentWinPercent = 0.0f;
+		auto turn = getFileMappingVars()._mappedViewOfFile->_turn % 2;
+		if (turn == 0) // Not red's turn
+			currentWinPercent = 1.0f; // = loss for red's opponent
 		for (size_t i = 0; i < boards.size(); i++)
 		{
-			lastRoundWinners.push_back(&boards[i]);
-		}
-
-		// Get THE board
-		std::vector<BoardVectAndClass*> winningBoards;
-		while (lastRoundWinners.size() > 1)
-		{
-			for (size_t i = 0; i < lastRoundWinners.size(); i++)
+			switch (turn)
 			{
-				std::cout << lastRoundWinners[i]->getClassStr() << "\n";
-			}
-
-			for (size_t i = 0; i < lastRoundWinners.size(); i++)
-			{
-				// Odd board gets free pass to next round
-				if (i + 1 == lastRoundWinners.size())
+			case 0:
+				// If less chance of losing
+				if (boards[i]._redWinPercent < currentWinPercent)
 				{
-					winningBoards.push_back(lastRoundWinners[i]);
-					break;
+					currentWinPercent = boards[i]._redWinPercent;
+					boardIndex = i;
 				}
-
-				if (i % 2 == 0)
+				break;
+			case 1:
+				// If higher chance of winning
+				if (boards[i]._redWinPercent > currentWinPercent)
 				{
-					BoardVectAndClass* winningBoard = nullptr;
-					// Compare boards i and i+1
-					winningBoard = boardSelection(*lastRoundWinners[i], *lastRoundWinners[i + 1]);
-
-					// Add the new winner
-					winningBoards.push_back(winningBoard);
-					i++; // Jump over 2nd board
+					currentWinPercent = boards[i]._redWinPercent;
+					boardIndex = i;
 				}
-			}
-			lastRoundWinners = winningBoards;
-			winningBoards.clear();
-		}
-
-		// Get board index
-		for (size_t i = 0; i < boards.size(); i++)
-		{
-			if (boards[i]._board == lastRoundWinners[0]->_board)
-			{
-				boardIndex = i;
+				break;
+			default:
+				std::cout << "Default case error in win% <> currWin% switch.\n";
 				break;
 			}
 		}
-
-
-		//// Simulating what more or less should happen
-		//if (doDebugPrintOut)
-		//{
-		//	std::cout << "BoardCount: " << boards.size() << "\n";
-		//	std::cout << "Checking: ";
-		//}
-		//for (size_t i = 0; i < boards.size(); i++)
-		//{
-		//	if (doDebugPrintOut)
-		//		std::cout << i << " ";
-		//	if (boards[i]._boardClassification == BoardClassification::Good)
-		//	{
-		//		if (doDebugPrintOut)
-		//			std::cout << "Chosen board num: " << i << "\n";
-		//		boardIndex = i;
-		//		break;
-		//	}
-		//}
-
+		if (doDebugPrintOut)
+			std::cout << "Chosen board num: " << boardIndex << " Value: " << boards[boardIndex]._redWinPercent << "%\n";
 
 		// Make selection and finish this transaction
 		getFileMappingVars()._mappedViewOfFile->setChosenBoardIndex(boardIndex);
@@ -600,7 +531,7 @@ NeuralNet loadNetwork(int session, int saveNum)
 	strStream << std::setfill('0') << std::setw(3) << session << "-";
 	strStream << std::setfill('0') << std::setw(3) << saveNum << ".pt";
 	
-	NeuralNet net(64, 60, 44, 1); // net(64, 44, 1);
+	NeuralNet net;
 	torch::load(net, strStream.str());
 	return net;
 }
@@ -637,7 +568,6 @@ bool loadLatestNetwork(NeuralNet& net, int& outSession, int& outSaveNum)
 	}
 
 	torch::load(net, latestSaveStr);
-
 
 	// Get the latest save's session and save number
 	std::replace(latestSaveStr.begin(), latestSaveStr.end(), '-', ' ');

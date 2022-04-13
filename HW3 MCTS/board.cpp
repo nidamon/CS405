@@ -52,7 +52,10 @@ int Board::_boardCount = 0;
 
 // Functions
 
-
+Board::Board()
+{
+	++_boardCount;
+}
 Board::Board(bool player2IsBlack) : _tiles(std::vector<PieceType>(32, PieceType::NoPiece))
 {
 	sf::Vector2<float> rendTexDimensions(768, 768);
@@ -70,7 +73,6 @@ Board::Board(bool player2IsBlack) : _tiles(std::vector<PieceType>(32, PieceType:
 
 	++_boardCount;
 }
-
 Board::Board(std::vector<PieceType> tiles) : _tiles(tiles)
 {
 	++_boardCount;
@@ -97,6 +99,33 @@ void Board::setup()
 void Board::setup(std::vector<PieceType>& newTiles)
 {
 	_tiles = newTiles;
+}
+void Board::setRand(std::mt19937& mt)
+{
+	std::uniform_int_distribution randInt(0, 4);
+	for (size_t i = 0; i < _tiles.size(); i++)
+	{
+		switch (randInt(mt))
+		{
+		case 0:
+			_tiles[i] = PieceType::NoPiece;
+			break;
+		case 1:
+			_tiles[i] = PieceType::Player1_Pawn;
+			break;
+		case 2:
+			_tiles[i] = PieceType::Player2_Pawn;
+			break;
+		case 3:
+			_tiles[i] = PieceType::Player1_King;
+			break;
+		case 4:
+			_tiles[i] = PieceType::Player2_King;
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 // Piece diplay setup
