@@ -8,6 +8,7 @@ This is the main / source file for using the neural network features from PyTorc
 
 #include "CheckersAIBrain.h"
 
+#include <random>
 #include <iomanip>
 #include <Windows.h>
 #include <string>
@@ -37,237 +38,63 @@ FileMappingVars& getFileMappingVars()
 	return fileMappingVars;
 }
 
-//int main()
-//{
-//
-//	//PieceType _ = PieceType::NoPiece;
-//	//PieceType r = PieceType::Player1_Pawn;
-//	//PieceType b = PieceType::Player2_Pawn;
-//	//PieceType R = PieceType::Player1_King;
-//	//PieceType B = PieceType::Player2_King;
-//	//std::vector<PieceType> board1 = {
-//	//			_,    _,    _,    _,
-//	//		 R,    _,    _,    _,
-//	//			b,    B,    _,    _,
-//	//		 _,    _,    R,    _,
-//	//			b,    b,    b,    _,
-//	//		 _,    _,    _,    _,
-//	//			_,    _,    b,    _,
-//	//		 _,    _,    _,    _,
-//	//};
-//	//std::vector<PieceType> board2 = {
-//	//		_,    _,    _,    _,
-//	//	 R,    _,    _,    _,
-//	//		_,    _,    _,    _,
-//	//	 _,    _,    _,    _,
-//	//		_,    _,    _,    _,
-//	//	 _,    _,    _,    _,
-//	//		_,    _,    _,    _,
-//	//	 _,    _,    R,    _,
-//	//};
-//	//
-//	//auto addBoardsValues = [](std::vector<float>& data, const std::vector<PieceType>& board1, const std::vector<PieceType>& board2, int turn)
-//	//{
-//	//	auto addBoardValues = [turn](std::vector<float>& data, size_t indexStart, const std::vector<PieceType>& board) {
-//	//		float modifier = 1.0f;
-//	//		if (turn % 2 == 0)
-//	//			modifier = -1.0f;
-//	//		for (size_t i = 0; i < board.size(); i++)
-//	//		{
-//	//			float tileVal = 0.0f;
-//	//			switch (board[i])
-//	//			{
-//	//			case PieceType::NoPiece:
-//	//				tileVal = 0.0f * modifier;
-//	//				break;
-//	//			case PieceType::Player1_Pawn:
-//	//				tileVal = 1.0f * modifier;
-//	//				break;
-//	//			case PieceType::Player2_Pawn:
-//	//				tileVal = -1.0f * modifier;
-//	//				break;
-//	//			case PieceType::Player1_King:
-//	//				tileVal = 1.5f * modifier;
-//	//				break;
-//	//			case PieceType::Player2_King:
-//	//				tileVal = -1.5f * modifier;
-//	//				break;
-//	//			default:
-//	//				break;
-//	//			}
-//	//			data[indexStart + i] = tileVal;
-//	//		}
-//	//	};
-//	//	addBoardValues(data, 0, board1);
-//	//	addBoardValues(data, 32, board2);
-//	//};
-//	//
-//	//std::vector<float> data(64);
-//	//int turn = 1; // getFileMappingVars()._mappedViewOfFile->_turn
-//	//addBoardsValues(data, board1, board2, turn);
-//
-//	bool isTraining = true;
-//	if (getFileMappingVars()._mappedViewOfFile != nullptr)
-//		bool isTraining = getFileMappingVars()._mappedViewOfFile->isTraining();
-//	int session = 0;
-//	int save = 0;
-//	int iterationCount = 0;
-//	int checkPointNum = 100;
-//	NeuralNet net(64, 44, 1);
-//	//if (!loadLatestNetwork(net, session, save))
-//	//{
-//	//	std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
-//	//	//return 0;
-//	//}
-//	//// Increment session
-//	//session += 1;
-//	//save = 0; // New session, so new save count
-//
-//	std::vector<BoardVectAndClass> boards;
-//
-//
-//
-//
-//	float learningRate = 0.001f;
-//	auto criterion = torch::nn::CrossEntropyLoss();
-//	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
-//
-//	// Network stuff in here
-//	auto boardSelection = [&](BoardVectAndClass& a, BoardVectAndClass& b) {
-//		auto addBoardsValues = [](std::vector<float>& data, const std::vector<PieceType>& board1, const std::vector<PieceType>& board2, int turn)
-//		{
-//			auto addBoardValues = [turn](std::vector<float>& data, size_t indexStart, const std::vector<PieceType>& board) {
-//				float modifier = 1.0f;
-//				if (turn % 2 == 0)
-//					modifier = -1.0f;
-//				for (size_t i = 0; i < board.size(); i++)
-//				{
-//					float tileVal = 0.0f;
-//					switch (board[i])
-//					{
-//					case PieceType::NoPiece:
-//						tileVal = 0.0f * modifier;
-//						break;
-//					case PieceType::Player1_Pawn:
-//						tileVal = 1.0f * modifier;
-//						break;
-//					case PieceType::Player2_Pawn:
-//						tileVal = -1.0f * modifier;
-//						break;
-//					case PieceType::Player1_King:
-//						tileVal = 1.5f * modifier;
-//						break;
-//					case PieceType::Player2_King:
-//						tileVal = -1.5f * modifier;
-//						break;
-//					default:
-//						break;
-//					}
-//					data[indexStart + i] = tileVal;
-//				}
-//			};
-//			addBoardValues(data, 0, board1);
-//			addBoardValues(data, 32, board2);
-//		};
-//
-//		std::vector<float> data(64);			   		 		
-//		int turn = 1; 
-//		if (getFileMappingVars()._mappedViewOfFile != nullptr)
-//			turn = getFileMappingVars()._mappedViewOfFile->_turn;
-//		addBoardsValues(data, a._board, b._board, turn);
-//
-//		float value = 0.0f;
-//		at::Tensor output;
-//		if (isTraining)
-//		{
-//			std::vector<float> preference{ 0.0f };
-//			if (a._boardClassification > b._boardClassification)
-//				preference.front() = 1.0f;
-//			else if (a._boardClassification < b._boardClassification)
-//				preference.front() = -1.0f;
-//			else
-//				preference.front() = 0.0f; // If 0, don't train for picking
-//
-//			auto target = torch::tensor(torch::detail::TensorDataContainer(preference));
-//
-//			// Forward
-//			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
-//			output = net->forward(x);
-//			auto loss = criterion(output, target);
-//
-//			// Backward
-//			optimizer.zero_grad();
-//			loss.backward();
-//
-//			// Gradient descent or adam step
-//			optimizer.step();
-//
-//
-//			iterationCount++;
-//			if (iterationCount >= checkPointNum)
-//			{
-//				iterationCount = 0;
-//				saveNetwork(net, session, save);
-//				save += 1;
-//			}
-//		}
-//		else
-//		{
-//			auto x = torch::tensor(torch::detail::TensorDataContainer(data));
-//			output = net->forward(x);
-//		}
-//
-//		// Result
-//		std::cout << output << " ";
-//		value = output.item;
-//		std::cout << value << "\n";
-//		if (value > 0.0f)
-//		{
-//			return a;
-//		}
-//		else
-//		{
-//			return b;
-//		}
-//	};
-//
-//	// Load up the boards into pointer vector
-//	std::vector<BoardVectAndClass*> lastRoundWinners;
-//	for (size_t i = 0; i < boards.size(); i++)
-//	{
-//		lastRoundWinners.push_back(&boards[i]);
-//	}
-//
-//	// Get THE board
-//	std::vector<BoardVectAndClass*> winningBoards;
-//	while (lastRoundWinners.size() > 1)
-//	{
-//		for (size_t i = 0; i < lastRoundWinners.size(); i++)
-//		{
-//			if (i % 2 == 0)
-//			{
-//				BoardVectAndClass* winningBoard = nullptr;
-//				// Compare boards i and i+1
-//				winningBoard = &boardSelection(*lastRoundWinners[i], *lastRoundWinners[i + 1]);
-//
-//				// Add the new winner
-//				winningBoards.push_back(winningBoard);
-//			}
-//			else // Odd board gets free pass to next round
-//			{
-//				if(i + 1 == lastRoundWinners.size())
-//					winningBoards.push_back(lastRoundWinners[i]);
-//			}
-//		}
-//		lastRoundWinners = winningBoards;
-//		winningBoards.clear();
-//	}
-//
-//
-//
-//
-//	
-//}
+bool loadTrainingData(std::vector<BoardArrAndPercent>& trainingData)
+{
+	std::string trainingDataFileName = "CheckersBrainSaves/TrainingData/TrainingData.dat";;
+	std::ifstream fin(trainingDataFileName, std::ios::binary);
+	if (!fin)
+	{
+		std::cout << "ERROR: Did not open the " << trainingDataFileName << " file." << std::endl;
+		return false;
+	}
+	else
+	{
+		while (fin)
+		{	
+			BoardArrAndPercent bAP;
+			fin.read(reinterpret_cast<char*>(&bAP), sizeof(bAP));
+
+			trainingData.push_back(bAP);			
+		}
+		if (!fin)
+		{
+			if (fin.eof())
+				return true;
+			else
+			{
+				std::cout << "ERROR: Failure upon reading file in loadGameLogs()." << std::endl;
+				return false;
+			}
+		}
+	}
+	return true;
+}
+bool saveTrainingData(std::vector<BoardArrAndPercent>& trainingData)
+{
+	std::string trainingDataFileName = "CheckersBrainSaves/TrainingData/TrainingData.dat";
+	std::ofstream fout(trainingDataFileName, std::ios::binary | std::ios::out);
+	if (!fout)
+	{
+		std::cout << "ERROR: Did not open/create " << trainingDataFileName << std::endl;
+		return false;
+	}
+	else
+	{
+		for (auto& i : trainingData) {
+			fout.write(reinterpret_cast<char*>(&i), sizeof(i));
+			if (!fout)
+			{
+				std::cout << "ERROR: Could not write trainingData into " << trainingDataFileName << std::endl;
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+std::random_device r;
+std::mt19937 gen(r());
+std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 
 // Main
 int main()
@@ -290,23 +117,30 @@ int main()
 
 	getFileMappingVars()._mappedViewOfFile->setBrainOnOff(true);
 	   
-	bool isTraining = true;
+	bool isTraining = false;
 	if (getFileMappingVars()._mappedViewOfFile != nullptr)
 	{
 		isTraining = getFileMappingVars()._mappedViewOfFile->isTraining();
-		if (getFileMappingVars()._mappedViewOfFile->isTraining())
+		if (isTraining)
 			std::cout << "It says training\n";
 		else
 			std::cout << "It DOES NOT say training\n";
 	}
 
+	// Training data vector
+	std::vector<BoardArrAndPercent> trainingData = {};
+	bool usingTrainingData = false;
+	if(isTraining)
+		usingTrainingData = loadTrainingData(trainingData);
+	   
+
 	if(doDebugPrintOut)
-		std::cout << "Debug printout on.\n";
+		std::cout << "Debug printout Enabled.\n";
 
 	int session = 0;
 	int save = 0;
 	int iterationCount = 0;
-	int checkPointNum = 500;
+	int checkPointNum = 5000;
 	NeuralNet net;
 	// Load the last network to continue previous learning
 	if (!loadLatestNetwork(net, session, save))
@@ -322,7 +156,7 @@ int main()
 
 	std::vector<BoardVectAndPercent> boards;
 
-	const float learningRate = 0.001f;
+	const float learningRate = 0.0001f;
 	auto criterion = torch::nn::HuberLoss();
 	auto optimizer = torch::optim::Adam(net.get()->parameters(), learningRate);
 
@@ -359,8 +193,96 @@ int main()
 			}
 		};
 
-		std::vector<float> data(32);
-		addBoardValues(data, boardAndTrainingValue._board);
+		auto getControlValues = [&](const std::vector<PieceType>& board)
+		{
+			// Get a vector that is easier to look at
+			std::vector<float> boardPieceVals(64);
+			for (size_t i = 0; i < boardPieceVals.size(); i++)
+			{
+				float tileVal = 0.0f;
+				if (i % 2 == 1)
+					switch (board[i / 2])
+					{
+					case PieceType::NoPiece:
+						tileVal = 0.0f;
+						break;
+					case PieceType::Player1_Pawn:
+						tileVal = pawnWeight;
+						break;
+					case PieceType::Player2_Pawn:
+						tileVal = -pawnWeight;
+						break;
+					case PieceType::Player1_King:
+						tileVal = kingWeight;
+						break;
+					case PieceType::Player2_King:
+						tileVal = -kingWeight;
+						break;
+					default:
+						break;
+					}
+				boardPieceVals[i] = tileVal;
+			}
+
+			auto areaControlPercent = [&boardPieceVals](int areaWidth, int areaHeight, int areaX, int areaY)
+			{
+				float areaRedSum = 0.0f;
+				float areaOppSum = 0.0f;
+				// Area sum
+				for (size_t ay = 0; ay < areaHeight; ay++)
+				{
+					size_t y = areaY + ay;
+					for (size_t ax = 0; ax < areaWidth; ax++)
+					{
+						size_t x = areaX + ax;
+						size_t pos = x % 8 + y * 8;
+						if (boardPieceVals[pos] > 0) // Red
+							areaRedSum += boardPieceVals[pos];
+						else // Opponent (opponent pieces are negative values)
+							areaOppSum -= boardPieceVals[pos];
+					}
+				}
+				// Red's point value / total points in the area
+				float val = 0.0f;
+				if(areaRedSum + areaOppSum > 0.0f)
+					val = areaRedSum / (areaRedSum + areaOppSum);
+				if (val != val)
+				{
+					std::cout << "areaRedSum=" << areaRedSum << "\n";
+					std::cout << "areaTotal=" << areaOppSum << "\n";
+					std::cout << "Dim=" << areaWidth << " area(" << areaX << ", " << areaY << ") = " << val << "\n";
+				}
+				return val;
+			};
+
+
+			std::vector<float> controlPercents(91);
+			size_t index = 0;
+			for (size_t i = 3; i < 9; i++)
+			{
+				// 36 3x3
+				// 25 4x4
+				// 16 5x5
+				//  9 6x6
+				//  4 7x7
+				//  1 8x8
+				size_t areaDim = (6 - (i - 3));
+				for (size_t j = 0; j < areaDim * areaDim; j++)
+				{
+					auto val = areaControlPercent(i, i, j % areaDim, j / areaDim);
+
+					controlPercents[index] = val;
+					index++;
+				}
+			}
+
+			return controlPercents;
+		};
+
+
+		//std::vector<float> data(32);
+		//addBoardValues(data, boardAndTrainingValue._board);
+		std::vector<float> data = getControlValues(boardAndTrainingValue._board);
 
 		at::Tensor output;
 		if (isTraining)
@@ -373,7 +295,6 @@ int main()
 			output = net(x);
 
 			auto loss = criterion(output, target); // This here
-			//std::cout << "Output: " << output << "\nTarget: " << target << "\n";
 
 			// Backward
 			optimizer.zero_grad();
@@ -399,7 +320,8 @@ int main()
 
 		// Result
 		auto value = output.item().toFloat();
-		std::cout << "Out: " << value << " -> " << boardAndTrainingValue._redWinPercent << "\n";
+		if(doDebugPrintOut)
+			std::cout << "Out: " << value << " -> " << boardAndTrainingValue._redWinPercent << "\n";
 
 		return value;
 	};
@@ -408,96 +330,139 @@ int main()
 		&& getFileMappingVars()._mappedViewOfFile->isBrainOn() // Are we supposed to be off
 		&& getFileMappingVars()._mappedViewOfFile->isGameOn()) // Should we turn off
 	{
-		boards.clear();
-
-		// Load Data from file
-		while (getFileMappingVars()._mappedViewOfFile->_thinkStart == false)
+		if (getFileMappingVars()._mappedViewOfFile->_hasBoradsToPass || isTraining == false)
 		{
-			// If there is no longer a mapped file to look at
-			if (getFileMappingVars()._mappedViewOfFile == nullptr || getFileMappingVars()._mappedViewOfFile->isGameOn() == false)   // No mapped file
+			boards.clear();
+
+			// Load Data from file
+			while (getFileMappingVars()._mappedViewOfFile->_thinkStart == false || getFileMappingVars()._mappedViewOfFile->_hasBoradsToPass)
 			{
-				if (isTraining)
-					saveNetwork(net, session, save);
-				return 0;
+				// If there is no longer a mapped file to look at
+				if (getFileMappingVars()._mappedViewOfFile == nullptr || getFileMappingVars()._mappedViewOfFile->isGameOn() == false)   // No mapped file
+				{
+					if (isTraining)
+						saveNetwork(net, session, save);
+					if (usingTrainingData)
+						if (saveTrainingData(trainingData))
+							std::cout << "Training data saved.\n";
+					return 0;
+				}
+
+				// load in boards
+				if (getFileMappingVars()._mappedViewOfFile->isNextBoardRequested() == false) // Waiting for board input
+				{
+					boards.push_back(getFileMappingVars()._mappedViewOfFile->getBoardAndClassification());
+					getFileMappingVars()._mappedViewOfFile->nextBoardPlease();
+					DebugTextOut("Waiting for next board.");
+				}
 			}
 
-			// load in boards
-			if (getFileMappingVars()._mappedViewOfFile->isNextBoardRequested() == false) // Waiting for board input
-			{
-				boards.push_back(getFileMappingVars()._mappedViewOfFile->getBoardAndClassification());
-				getFileMappingVars()._mappedViewOfFile->nextBoardPlease();
-				DebugTextOut("Waiting for next board.");
-			}
+			DebugTextOut("All boards acquired.");
 		}
 
-		DebugTextOut("All boards acquired.");
-
-		if (doDebugPrintOut)
+		if(usingTrainingData)
 			for (size_t i = 0; i < boards.size(); i++)
 			{
-				std::cout << "[" << i << "] redWinPercent: " << boards[i]._redWinPercent;
-				std::cout << "\n";
+				BoardArrAndPercent bAP;
+				bAP._redWinPercent = boards[i]._redWinPercent;
+				bAP._checkCount = boards[i]._checkCount;
+				for (size_t j = 0; j < boards[i]._board.size(); j++)
+					bAP._board[j] = boards[i]._board[j];
+
+				auto it = std::find_if(trainingData.begin(), trainingData.end(), [&](BoardArrAndPercent& compareBoard) {
+					for (size_t k = 0; k < 32; k++)
+						if (boards[i]._board[k] != compareBoard._board[k])
+							return false;
+					return true;
+					});
+
+				if (it != trainingData.end())
+				{
+					// Readjust the win%
+					auto num = it->_redWinPercent * float(it->_checkCount) + bAP._redWinPercent * float(bAP._checkCount);
+					it->_redWinPercent = num / (float(it->_checkCount) + float(bAP._checkCount));
+				}
+				else
+					trainingData.push_back(bAP);
 			}
 
-
-		getFileMappingVars()._mappedViewOfFile->setThinking(true);
-		getFileMappingVars()._mappedViewOfFile->startThinking(); // Makes _startThink false
-
-
-		// Thinking right here
-		for (size_t i = 0; i < boards.size(); i++)
-			boards[i]._redWinPercent = boardEvaluation(boards[i]);
-
-
-		int boardIndex = 0;
-
-		// Getting board
-		if (doDebugPrintOut)
+		if (getFileMappingVars()._mappedViewOfFile->isTraining() == false)
 		{
-			std::cout << "BoardCount: " << boards.size() << "\n";
-		}
-		float currentWinPercent = 0.0f;
-		auto turn = getFileMappingVars()._mappedViewOfFile->_turn % 2;
-		if (turn == 0) // Not red's turn
-			currentWinPercent = 1.0f; // = loss for red's opponent
-		for (size_t i = 0; i < boards.size(); i++)
-		{
-			switch (turn)
+			getFileMappingVars()._mappedViewOfFile->setThinking(true);
+			getFileMappingVars()._mappedViewOfFile->startThinking(); // Makes _startThink false
+
+			// Thinking right here
+			for (size_t i = 0; i < boards.size(); i++)
+				boards[i]._redWinPercent = boardEvaluation(boards[i]);
+
+
+			int boardIndex = 0;
+
+			// Getting board
+			if (doDebugPrintOut)
 			{
-			case 0:
-				// If less chance of losing
-				if (boards[i]._redWinPercent < currentWinPercent)
-				{
-					currentWinPercent = boards[i]._redWinPercent;
-					boardIndex = i;
-				}
-				break;
-			case 1:
-				// If higher chance of winning
-				if (boards[i]._redWinPercent > currentWinPercent)
-				{
-					currentWinPercent = boards[i]._redWinPercent;
-					boardIndex = i;
-				}
-				break;
-			default:
-				std::cout << "Default case error in win% <> currWin% switch.\n";
-				break;
+				std::cout << "BoardCount: " << boards.size() << "\n";
 			}
+			float currentWinPercent = 0.0f;
+			auto turn = getFileMappingVars()._mappedViewOfFile->_turn % 2;
+			if (turn == 0) // Not red's turn
+				currentWinPercent = 1.0f; // = loss for red's opponent
+			for (size_t i = 0; i < boards.size(); i++)
+			{
+				switch (turn)
+				{
+				case 0:
+					// If less chance of losing
+					if (boards[i]._redWinPercent < currentWinPercent)
+					{
+						currentWinPercent = boards[i]._redWinPercent;
+						boardIndex = i;
+					}
+					break;
+				case 1:
+					// If higher chance of winning
+					if (boards[i]._redWinPercent > currentWinPercent)
+					{
+						currentWinPercent = boards[i]._redWinPercent;
+						boardIndex = i;
+					}
+					break;
+				default:
+					std::cout << "Default case error in win% <> currWin% switch.\n";
+					break;
+				}
+			}
+			if (doDebugPrintOut)
+				std::cout << "Chosen board num: " << boardIndex << " Value: " << boards[boardIndex]._redWinPercent << "%\n";
+
+			// Make selection and finish this transaction
+			getFileMappingVars()._mappedViewOfFile->setChosenBoardIndex(boardIndex);
+			getFileMappingVars()._mappedViewOfFile->setThinking(false);
+
+			DebugTextOut("Selection made.");
 		}
-		if (doDebugPrintOut)
-			std::cout << "Chosen board num: " << boardIndex << " Value: " << boards[boardIndex]._redWinPercent << "%\n";
+		else
+		{
+			// Get a random piece of data to run through the network
+			BoardArrAndPercent bAP = trainingData[(int(randPercent(gen) * float(int(trainingData.size()) + 1))) % trainingData.size()];
 
-		// Make selection and finish this transaction
-		getFileMappingVars()._mappedViewOfFile->setChosenBoardIndex(boardIndex);
-		getFileMappingVars()._mappedViewOfFile->setThinking(false);
+			std::vector<PieceType> vectBoard(32);
+			for (size_t i = 0; i < 32; i++)
+				vectBoard[i] = bAP._board[i];
 
-		DebugTextOut("Selection made.");
+			BoardVectAndPercent vBP = { vectBoard, bAP._redWinPercent };
+
+			// Pass to network
+			boardEvaluation(vBP);
+		}
 	}
 
 	// Save on exit
 	if(isTraining)
 		saveNetwork(net, session, save);
+	if (usingTrainingData)
+		if (saveTrainingData(trainingData))
+			std::cout << "Training data saved.\n";
 	return 0;
 }
 

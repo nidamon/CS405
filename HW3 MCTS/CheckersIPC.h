@@ -17,18 +17,21 @@ struct BoardArrAndPercent
 {
 	PieceType _board[32];
 	float _redWinPercent;
+	int _checkCount;
 };
 
 struct BoardVectAndPercent
 {
 	std::vector<PieceType> _board;
 	float _redWinPercent;
+	int _checkCount;
 };
 
 struct CheckersIPC
 {
 	BoardArrAndPercent _bp;
 	bool _nextBoardPlease = true;
+	bool _hasBoradsToPass = false;
 	bool _thinkStart = false;
 	bool _thinking = false;
 	int _chosenBoardIndex = -1;
@@ -45,14 +48,15 @@ struct CheckersIPC
 		for (size_t i = 0; i < 32; i++)
 			vectBoard[i] = _bp._board[i];
 
-		return BoardVectAndPercent{ vectBoard, _bp._redWinPercent };
+		return BoardVectAndPercent{ vectBoard, _bp._redWinPercent, _bp._checkCount };
 	}
-	void setBoardAndClassification(std::vector<PieceType>& board, float redWinPercent)
+	void setBoardAndClassification(std::vector<PieceType>& board, float redWinPercent, int checkCount)
 	{
 		for (size_t i = 0; i < 32; i++)
 			_bp._board[i] = board[i];
 
 		_bp._redWinPercent = redWinPercent;
+		_bp._checkCount = checkCount;
 	}
 
 	void nextBoardPlease()

@@ -326,6 +326,7 @@ private:
 		Board _board;
 		std::queue<sf::Vector3<int>> _moveSequence;
 		float _redPercentWin = 0.0f;
+		int _checkCount = 0;
 	};
 	std::vector<BoardAndMoves> mCTS_ReturnChildren(MCTS_Node* rootNode, float timeAvailableInSeconds);
 
@@ -417,7 +418,7 @@ private:
 	static FileMappingVars _fileMappingVars;
 
 	// Neural Network training
-	bool _isNN_Training = true;
+	bool _isNN_Training = false; // Set to true in constructor if mapped file says training (menu.cpp)
 
 	// Testing
 	bool _isTesting = false;

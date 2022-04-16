@@ -52,7 +52,7 @@ void Menu::run()
 	while (_gfx.isOpen())
 	{
 
-		if (Game::getFileMappingVars()._mappedViewOfFile != nullptr)
+		if (Game::getFileMappingVars()._mappedViewOfFile != nullptr && Game::getFileMappingVars()._mappedViewOfFile->isTraining())
 			if (gameOn && _game == nullptr && float((std::chrono::steady_clock::now() - _menuWaitTimerStart).count()) / 1000000000.0f > _menuWaitTimerForTraining)
 			{
 				std::cout << "\n\nAuto starting next Game\n\n";
@@ -69,7 +69,10 @@ void Menu::run()
 			if (event.type == sf::Event::Closed)
 			{
 				if (Game::getFileMappingVars()._hFileMap != NULL)
+				{
+					_game = nullptr;
 					unMapFile();
+				}
 				_gfx.close();
 			}
 		}
@@ -1022,14 +1025,17 @@ bool Menu::createMappedFile()
 	Game::getFileMappingVars()._mappedViewOfFile->setGameOnOff(true);
 
 	// Do we want to train?
-	bool doTraining = true;
+	bool doTraining = false;
 	if (doTraining)
 	{
 		std::cout << "Training -> ON.\n";
 		Game::getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(doTraining);
 	}
 	else
+	{
 		std::cout << "Training -> OFF.\n";
+		Game::getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(false);
+	}
 
 	return retBool;
 }
