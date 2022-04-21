@@ -1244,24 +1244,31 @@ std::unique_ptr<Game::MCTS_Node>& Game::rolloutPolicy(Game::MCTS_Node* node)
 // Picks the child with the highest number of visits
 Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
 {
-    std::cout << "best_child called\n";
+    if(_doDebugPrintout)
+        std::cout << "best_child called\n";
 
     if (node->isNotTerminal())
     {
-        std::cout << "children count = " << node->getChildrenNodes().size() << "\n";
-        std::cout << "visit count = " << node->getVisitCount() << "\n";
-        std::cout << "Score = " << node->getScore() << "\n";
+        if (_doDebugPrintout)
+        {
+            std::cout << "children count = " << node->getChildrenNodes().size() << "\n";
+            std::cout << "visit count = " << node->getVisitCount() << "\n";
+            std::cout << "Score = " << node->getScore() << "\n";
+        }
 
         MCTS_Node* bestChild = node->getChildrenNodes()[0].get();
 
         size_t indexOfBestChild = 0;
         for (size_t i = 0; i < node->getChildrenNodes().size(); i++)
         {
-            std::cout << "Child visit count: " << std::setw(6) << node->getChildrenNodes()[i]->getVisitCount()
-                << " Score: " << std:: setw(7) << node->getChildrenNodes()[i]->getScore()
-                << " UCB: " << getUCB(node->getChildrenNodes()[i].get()) 
-                << " Moves: " << node->getChildrenNodes()[i]->movesStr()
-                << "\n";
+            if (_doDebugPrintout)
+            {
+                std::cout << "Child visit count: " << std::setw(6) << node->getChildrenNodes()[i]->getVisitCount()
+                    << " Score: " << std::setw(7) << node->getChildrenNodes()[i]->getScore()
+                    << " UCB: " << getUCB(node->getChildrenNodes()[i].get())
+                    << " Moves: " << node->getChildrenNodes()[i]->movesStr()
+                    << "\n";
+            }
 
             if (node->getChildrenNodes()[i]->getVisitCount() > bestChild->getVisitCount())
             {
@@ -1285,7 +1292,8 @@ Game::MCTS_Node* Game::best_child(Game::MCTS_Node* node)
             int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
             _mCTS_RootNode = std::move(node->getChildrenNodes()[indexOfBestChild]);
             _mCTS_RootNode->setParentPointer(nullptr);
-            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
+            if (_doDebugPrintout)
+                std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
             return _mCTS_RootNode.get();
         }
     }
@@ -1538,7 +1546,7 @@ sf::Vector3<int> Game::mCTSCall()
         _queuedMoves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
         _lastTurnMCTS_wasCalled = _turnCount;
 
-
+        if (_doDebugPrintout)
         {
             auto movesCopy = _queuedMoves;
             std::stringstream strStream;
@@ -1553,16 +1561,19 @@ sf::Vector3<int> Game::mCTSCall()
             std::cout << "Moves: " << strStream.str() << "\n";
         }
 
-
-        std::cout << "After call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
-        std::cout << "Total nodes created this call: " << MCTS_Node::getNumNodesCreated() << "\n";
+        if (_doDebugPrintout)
+        {
+            std::cout << "After call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
+            std::cout << "Total nodes created this call: " << MCTS_Node::getNumNodesCreated() << "\n";
+        }
         MCTS_Node::resetNodeCount();
     }
 
     auto front = _queuedMoves.front();
     _queuedMoves.pop();
     
-    std::cout << "Current submove: " << "{ " << front.x << " " << front.y << " " << front.z << " }" << "\n";
+    if (_doDebugPrintout)
+        std::cout << "Current submove: " << "{ " << front.x << " " << front.y << " " << front.z << " }" << "\n";
 
     return front;
 }
@@ -1704,6 +1715,8 @@ std::queue<sf::Vector3<int>> Game::brainCall(int team, bool doPrintout, float ti
 
             // Gets a win percent for each move ***FOR RED***
             boardsAndMoves = mCTS_ReturnChildren(_mCTS_RootNode.get(), timeAvailableInSeconds);
+
+            std::cout << "If not traing, this should not be printing. BrainCall()->mCTS_ReturnChildren() was called.\n";
         }
 
 
@@ -1852,12 +1865,11 @@ void Game::makeMiniMaxMove(bool doPrintout)
 
         _latestMove = miniMaxCall(doPrintout);
 
-        if (_miniMaxCalls > 0)
+        if (_miniMaxCalls > 0 && doPrintout)
         {
             std::cout << "MiniMax calls: " << _miniMaxCalls << std::endl;
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;
             std::cout << "Average branch factor: " << (float)_branchCount / (float)_branchSplitCount << std::endl;
-
         }
 
         finalizeMove();
@@ -1873,7 +1885,7 @@ void Game::makeAlphaBetaMove(bool doPrintout)
 
         _latestMove = alphaBetaCall(doPrintout);
 
-        if (_alphaBetaCalls > 0)
+        if (_alphaBetaCalls > 0 && doPrintout)
         {
             std::cout << "AlphaBeta calls: " << _alphaBetaCalls << std::endl;
             std::cout << "BoardEvaluation calls: " << _evaluationCalls << std::endl;

@@ -194,8 +194,8 @@ std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 // Main
 int main()
 {
-	bool selfRunning = true;
-	const bool doDebugPrintOut = false;
+	bool selfRunning = false;
+	const bool doDebugPrintOut = true;
 	int checkPointNum = 10000;
 	   
 	bool openMapHasTriedOnce = false;
