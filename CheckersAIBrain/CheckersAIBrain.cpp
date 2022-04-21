@@ -14,7 +14,7 @@ This is the main / source file for using the neural network features from PyTorc
 #include <string>
 #include "out/build/CheckersIPC.h"
 
-#define DEBUG_PRINTOUT_CHECKERSBRAIN
+//#define DEBUG_PRINTOUT_CHECKERSBRAIN
 
 void DebugTextOut(std::string debugText)
 {
@@ -28,7 +28,7 @@ struct FileMappingVars {
 	HANDLE _hFileMap;
 	BOOL _bResultOfMapping;
 	CheckersIPC* _mappedViewOfFile;
-	size_t _szGame;
+	size_t _szIPC;
 };
 
 FileMappingVars fileMappingVars = { NULL, 0, nullptr, sizeof(CheckersIPC) };
@@ -56,6 +56,10 @@ bool loadTrainingData(std::vector<BoardArrAndPercent>& trainingData)
 
 			trainingData.push_back(bAP);			
 		}
+
+		std::cout << "Training Data size: " << trainingData.size() << "\n";
+		std::cout << "SizeOf training data point: " << sizeof(BoardArrAndPercent) << "\n";
+
 		if (!fin)
 		{
 			if (fin.eof())
@@ -92,6 +96,97 @@ bool saveTrainingData(std::vector<BoardArrAndPercent>& trainingData)
 	return true;
 }
 
+bool createMappedFile()
+{
+	bool retBool = true;
+
+	std::cout << "\t\t....Mapping File (Opening)...." << std::endl;
+	std::cout << std::endl;
+
+	CheckersIPC checkersIPC[1];
+
+	// Create File Map
+	getFileMappingVars()._hFileMap =
+		CreateFileMapping(
+			INVALID_HANDLE_VALUE,
+			NULL,
+			PAGE_READWRITE,
+			0,
+			getFileMappingVars()._szIPC,
+			TEXT("Local\\CheckersFileMap")
+		);
+
+	if (getFileMappingVars()._hFileMap == FALSE)
+	{
+		std::cout << "CreateFileMapping Failed & Error NO - " << GetLastError() << std::endl;
+		retBool = false;
+	}
+	else
+	{
+		std::cout << "CreateFileMapping Success" << std::endl;
+
+		// MapViewOfFile
+		getFileMappingVars()._mappedViewOfFile = (CheckersIPC*)MapViewOfFile(
+			getFileMappingVars()._hFileMap,
+			FILE_MAP_ALL_ACCESS,
+			0,
+			0,
+			getFileMappingVars()._szIPC);
+
+		if (getFileMappingVars()._mappedViewOfFile == NULL)
+		{
+			std::cout << "MapViewOfFile Failed & Error NO - " << GetLastError() << std::endl;
+			retBool = false;
+		}
+		else
+			std::cout << "MapViewOfFile Success" << std::endl;
+	}
+
+	// Copy Memory Function
+	MoveMemory(getFileMappingVars()._mappedViewOfFile, checkersIPC, getFileMappingVars()._szIPC);
+
+	getFileMappingVars()._mappedViewOfFile->setGameOnOff(true);
+
+	// Do we want to train?
+	bool doTraining = true;
+	if (doTraining)
+	{
+		std::cout << "Training -> ON.\n";
+		getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(doTraining);
+	}
+	else
+	{
+		std::cout << "Training -> OFF.\n";
+		getFileMappingVars()._mappedViewOfFile->setTrainingOnOff(false);
+	}
+
+	return retBool;
+}
+bool unMapFile()
+{
+	bool retBool = true;
+
+	std::cout << "\t\t....UnMapping File (Closing)...." << std::endl;
+	std::cout << std::endl;
+
+	// UnMapViewOfFile
+	getFileMappingVars()._bResultOfMapping = UnmapViewOfFile(getFileMappingVars()._mappedViewOfFile);
+	if (getFileMappingVars()._bResultOfMapping == FALSE)
+	{
+		std::cout << "UnMapViewOfFile Failed & Error No - " << GetLastError() << std::endl;
+		retBool = false;
+	}
+	else
+		std::cout << "UnMapViewOfFile Success" << std::endl;
+
+
+	// Close Handle
+	CloseHandle(getFileMappingVars()._hFileMap);
+
+	getFileMappingVars()._hFileMap = NULL;
+
+	return retBool;
+}
 std::random_device r;
 std::mt19937 gen(r());
 std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
@@ -99,20 +194,29 @@ std::uniform_real_distribution<float> randPercent(0.0f, 1.0f);
 // Main
 int main()
 {
-	const bool doDebugPrintOut = true;
+	bool selfRunning = true;
+	const bool doDebugPrintOut = false;
+	int checkPointNum = 10000;
 	   
 	bool openMapHasTriedOnce = false;
-	if(!openMappedFile())
+	if (selfRunning)
 	{
-		std::string str;
-		std::cout << "Could not find the mapped file.\n";
-		std::cout << "If the game has not requested for this proccess to run, then wait until it does and then hit enter. ";
-		std::getline(std::cin, str);
+		createMappedFile();
+	}
+	else
+	{
 		if (!openMappedFile())
-		{	
-			std::cout << "Failed to open.\nExiting.\n";
-			return 0;
-		}		
+		{
+			std::string str;
+			std::cout << "Could not find the mapped file.\n";
+			std::cout << "If the game has not requested for this proccess to run, then wait until it does and then hit enter. ";
+			std::getline(std::cin, str);
+			if (!openMappedFile())
+			{
+				std::cout << "Failed to open.\nExiting.\n";
+				return 0;
+			}
+		}
 	}
 
 	getFileMappingVars()._mappedViewOfFile->setBrainOnOff(true);
@@ -140,7 +244,6 @@ int main()
 	int session = 0;
 	int save = 0;
 	int iterationCount = 0;
-	int checkPointNum = 5000;
 	NeuralNet net;
 	// Load the last network to continue previous learning
 	if (!loadLatestNetwork(net, session, save))
@@ -148,6 +251,9 @@ int main()
 		std::cout << "ERROR: Failed to load Neural Network from file." << std::endl;
 		return 0;
 	}
+	else
+		std::cout << "Latest Neural Network Loaded." << std::endl;
+
 	net->train(isTraining);
 	
 	// Increment session
@@ -360,7 +466,9 @@ int main()
 			DebugTextOut("All boards acquired.");
 		}
 
-		if(usingTrainingData)
+		if (usingTrainingData)
+		{
+			size_t trainingDataSize = trainingData.size();
 			for (size_t i = 0; i < boards.size(); i++)
 			{
 				BoardArrAndPercent bAP;
@@ -385,6 +493,9 @@ int main()
 				else
 					trainingData.push_back(bAP);
 			}
+			if (trainingDataSize != trainingData.size())
+				std::cout << "Training data added " << trainingDataSize << " -> " << trainingData.size() << "\n";
+		}
 
 		if (getFileMappingVars()._mappedViewOfFile->isTraining() == false)
 		{
@@ -458,11 +569,18 @@ int main()
 	}
 
 	// Save on exit
-	if(isTraining)
+	if (isTraining)
 		saveNetwork(net, session, save);
-	if (usingTrainingData)
-		if (saveTrainingData(trainingData))
-			std::cout << "Training data saved.\n";
+	if (selfRunning)
+	{
+		unMapFile();
+	}
+	else
+	{
+		if (usingTrainingData)
+			if (saveTrainingData(trainingData))
+				std::cout << "Training data saved.\n";
+	}
 	return 0;
 }
 
@@ -575,7 +693,7 @@ bool openMappedFile()
 			FILE_MAP_ALL_ACCESS,
 			0,
 			0,
-			getFileMappingVars()._szGame);
+			getFileMappingVars()._szIPC);
 
 		if (getFileMappingVars()._mappedViewOfFile == NULL)
 		{

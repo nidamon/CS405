@@ -162,7 +162,7 @@ private:
 	sf::Sprite _checkersTitle;
 	std::vector<Button> _mainMenuButtons;
 
-	float _menuWaitTimerForTraining = 5.0f; // 5 seconds
+	float _menuWaitTimerForTraining = 1.0f; // 5 seconds
 	std::chrono::time_point<std::chrono::steady_clock> _menuWaitTimerStart; // Time since wait began
 
 	// Options menu

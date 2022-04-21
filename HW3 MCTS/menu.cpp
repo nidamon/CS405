@@ -1025,7 +1025,7 @@ bool Menu::createMappedFile()
 	Game::getFileMappingVars()._mappedViewOfFile->setGameOnOff(true);
 
 	// Do we want to train?
-	bool doTraining = false;
+	bool doTraining = true;
 	if (doTraining)
 	{
 		std::cout << "Training -> ON.\n";

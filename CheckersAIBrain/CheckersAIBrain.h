@@ -16,7 +16,7 @@ bool closeMappedFile();
 
 struct NeuralNetImpl : torch::nn::Module
 {
-    NeuralNetImpl(int inputSize = 91, int hiddenSize1 = 48, int hiddenSize2 = 32, int outputSize = 1)
+    NeuralNetImpl(int inputSize = 91, int hiddenSize1 = 92, int hiddenSize2 = 48, int outputSize = 1)
         : hidden1(inputSize, hiddenSize1), layer_norm1(torch::nn::LayerNormOptions(std::vector<int64_t>{hiddenSize1})),
         hidden2(hiddenSize1, hiddenSize1), layer_norm2(torch::nn::LayerNormOptions(std::vector<int64_t>{hiddenSize1})),
         hidden3(hiddenSize1, hiddenSize2), layer_norm3(torch::nn::LayerNormOptions(std::vector<int64_t>{hiddenSize2})),

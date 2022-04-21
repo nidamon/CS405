@@ -403,10 +403,6 @@ bool Game::runStep(bool mouseButtonPressed)
         }
     }
 
-    // After 100 moves there isn't going to be too much exciting data to learn from
-    if (_turnCount > 100 && _isNN_Training)
-        _gameOver = true;
-
     // Get possible piece moves
     getMoves();
 
@@ -703,15 +699,18 @@ void Game::winDisplaySet(PlayerColor playerColor)
 }
 void Game::winCheck()
 { 
-    if (_gameOver && _possibleMoves.empty() == false)
+    // After 100 moves there isn't going to be too much exciting data to learn from
+    if (_turnCount > 100 && _isNN_Training && !_gameOver)
     {
         if (!_isTesting)
         {
+            std::cout << "No Winner: Tie" << std::endl;
             _currentGameLog._winnerColor = 'T';
             _currentGameLog._turnCount = _turnCount;
             if (_currentGameLog._gameNumber != -1)
                 GameLogs::saveGameLog(_currentGameLog);
         }
+        _gameOver = true;
         return;
     }
 
@@ -1477,64 +1476,65 @@ sf::Vector3<int> Game::alphaBetaCall(bool doPrintout)
 
 sf::Vector3<int> Game::mCTSCall()
 {
-    std::cout << "Turn count: " << _turnCount << "\n";
-    std::cout << "_lastTurnMCTS_wasCalled count: " << _lastTurnMCTS_wasCalled << "\n";
+    //std::cout << "Turn count: " << _turnCount << "\n";
+    //std::cout << "_lastTurnMCTS_wasCalled count: " << _lastTurnMCTS_wasCalled << "\n";
 
+
+    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
 
     // If no root, make root
-    if (_mCTS_RootNode == nullptr)
-    {
-        _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-    }
-    else
-    {
-        // Opponent Call
-        if (_lastTurnMCTS_wasCalled == _turnCount - 1)
-        {
-            // Do nothing. The root is as it should be
-            std::cout << "StartUp: MCTS was called by opponent. No change.\n";
-        }
-        // Same team call after an opponent turn with no call
-        else if (_lastTurnMCTS_wasCalled == _turnCount - 2)
-        {
-            std::cout << "StartUp: Same team call after an opponent turn with no MCTS call.\n";
-
-            //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
-            int indexOfMatch = -1;
-            for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
-            {
-                if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
-                {
-                    indexOfMatch = i;
-                    //break;
-                }
-            }
-            int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
-            if (indexOfMatch != -1)
-            {
-                _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[indexOfMatch]);
-                _mCTS_RootNode->setParentPointer(nullptr);
-                std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
-            }
-            else
-            {
-                std::cout << "MCTS root swap FAILURE.\n";
-                _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-            }
-        }
-        else
-        {
-            // Just make a new root node
-            _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
-            std::cout << "StartUp: Made new root node.\n";
-        }
-
-    }
+    //if (_mCTS_RootNode == nullptr)
+    //{
+    //    _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //}
+    //else
+    //{
+    //    // Opponent Call
+    //    if (_lastTurnMCTS_wasCalled == _turnCount - 1)
+    //    {
+    //        // Do nothing. The root is as it should be
+    //        std::cout << "StartUp: MCTS was called by opponent. No change.\n";
+    //    }
+    //    // Same team call after an opponent turn with no call
+    //    else if (_lastTurnMCTS_wasCalled == _turnCount - 2)
+    //    {
+    //        std::cout << "StartUp: Same team call after an opponent turn with no MCTS call.\n";
+    //
+    //        //MCTS_Node* matchingChild = _mCTS_RootNode->getChildrenNodes()[0].get();
+    //        int indexOfMatch = -1;
+    //        for (size_t i = 0; i < _mCTS_RootNode->getChildrenNodes().size(); i++)
+    //        {
+    //            if (_mCTS_RootNode->getChildrenNodes()[i]->getBoard().getBoardTiles() == _board.getBoardTiles())
+    //            {
+    //                indexOfMatch = i;
+    //                //break;
+    //            }
+    //        }
+    //        int nodeCountBefore = MCTS_Node::getCurrentNodeCount();
+    //        if (indexOfMatch != -1)
+    //        {
+    //            _mCTS_RootNode = std::move(_mCTS_RootNode->getChildrenNodes()[indexOfMatch]);
+    //            _mCTS_RootNode->setParentPointer(nullptr);
+    //            std::cout << "MCTS root swap success. Before: " << nodeCountBefore << " After: " << MCTS_Node::getCurrentNodeCount() << "\n";
+    //        }
+    //        else
+    //        {
+    //            std::cout << "MCTS root swap FAILURE.\n";
+    //            _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //        }
+    //    }
+    //    else
+    //    {
+    //        // Just make a new root node
+    //        _mCTS_RootNode = std::move(std::make_unique<MCTS_Node>(_board, _turn));
+    //        std::cout << "StartUp: Made new root node.\n";
+    //    }
+    //}
 
     // If we have a set of moves that need to be made in succession (jumps)
     if (_queuedMoves.size() == 0)
     {
-        std::cout << "Before call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
+        //std::cout << "Before call: " << MCTS_Node::getCurrentNodeCount() << " nodes\n";
         _queuedMoves = mCTS(_mCTS_RootNode.get(), _timeAvailableInSeconds);
         _lastTurnMCTS_wasCalled = _turnCount;
 
